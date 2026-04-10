@@ -2,58 +2,43 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块·炫酷版</title>
+<title>俄罗斯方块·神级版</title>
 
 <style>
 body{
-    margin:0;
-    background:radial-gradient(circle,#000,#111);
-    color:white;
-    text-align:center;
-    font-family:sans-serif;
+margin:0;
+background:radial-gradient(circle,#000,#111);
+color:white;
+text-align:center;
+font-family:sans-serif;
 }
-
-#title{
-    margin-top:20px;
-    font-size:24px;
-    opacity:0;
-    animation:fadeIn 1s forwards;
-}
-
-@keyframes fadeIn{
-    to{opacity:1;}
-}
-
 canvas{
-    background:#000;
-    margin-top:10px;
-    box-shadow:0 0 20px cyan;
+background:#000;
+margin-top:10px;
+box-shadow:0 0 20px cyan;
 }
-
-#score{
-    margin-top:10px;
-    font-size:18px;
+#score,#rank{
+margin-top:10px;
 }
-
-#controls button{
-    padding:10px;
-    margin:5px;
-    font-size:16px;
-    border-radius:8px;
+button{
+padding:10px;
+margin:5px;
+font-size:16px;
 }
 </style>
 </head>
 
 <body>
 
-<h2 id="title">✨ 炫酷俄罗斯方块 ✨</h2>
+<h2>🔥 神级俄罗斯方块 🔥</h2>
 
 <canvas id="game" width="300" height="600"></canvas>
 <canvas id="next" width="120" height="120"></canvas>
 
 <div id="score">🏆 分数: 0</div>
+<div id="rank">🏅 排行榜</div>
 
-<div id="controls">
+<div>
 <button onclick="moveLeft()">⬅️</button>
 <button onclick="moveRight()">➡️</button>
 <button onclick="rotate()">🔄</button>
@@ -61,20 +46,24 @@ canvas{
 </div>
 
 <audio id="bgm" src="bgm.mp3" loop></audio>
+<audio id="rot" src="rotate.wav"></audio>
+<audio id="clr" src="clear.wav"></audio>
 
 <script>
-// ===== 音乐 =====
+// ===== 音频 =====
 const bgm=document.getElementById("bgm");
+const rot=document.getElementById("rot");
+const clr=document.getElementById("clr");
 
 document.body.addEventListener("click",()=>{
-    bgm.volume=0;
-    bgm.play();
-    let v=0;
-    let t=setInterval(()=>{
-        v+=0.05;
-        if(v>=0.5){v=0.5;clearInterval(t);}
-        bgm.volume=v;
-    },200);
+bgm.volume=0;
+bgm.play();
+let v=0;
+let t=setInterval(()=>{
+v+=0.05;
+if(v>=0.5){v=0.5;clearInterval(t);}
+bgm.volume=v;
+},200);
 },{once:true});
 
 // ===== 游戏 =====
@@ -87,28 +76,27 @@ const nctx=nextCanvas.getContext("2d");
 const grid=30,col=10,row=20;
 
 let board=Array.from({length:row},()=>Array(col).fill(null));
-let piece,newNext();
-let nextPiece=newNext();
 let score=0;
 
-function newNext(){
-    const shapes=[
-    [[1,1,1,1]],
-    [[1,1],[1,1]],
-    [[0,1,0],[1,1,1]],
-    [[1,1,0],[0,1,1]],
-    [[0,1,1],[1,1,0]],
-    [[1,0,0],[1,1,1]],
-    [[0,0,1],[1,1,1]]
-    ];
-    return {
-        x:3,y:0,
-        shape:shapes[Math.floor(Math.random()*shapes.length)],
-        color:`hsl(${Math.random()*360},70%,60%)`
-    };
+function newPiece(){
+const shapes=[
+[[1,1,1,1]],
+[[1,1],[1,1]],
+[[0,1,0],[1,1,1]],
+[[1,1,0],[0,1,1]],
+[[0,1,1],[1,1,0]],
+[[1,0,0],[1,1,1]],
+[[0,0,1],[1,1,1]]
+];
+return{
+x:3,y:0,
+shape:shapes[Math.floor(Math.random()*7)],
+color:`hsl(${Math.random()*360},70%,60%)`
+};
 }
 
-piece=newNext();
+let piece=newPiece();
+let nextPiece=newPiece();
 
 function collide(p){
 return p.shape.some((r,y)=>
@@ -129,7 +117,10 @@ function clearLines(){
 let lines=0;
 
 board=board.filter(r=>{
-if(r.every(v=>v)){lines++;flash();return false;}
+if(r.every(v=>v)){
+lines++;
+return false;
+}
 return true;
 });
 
@@ -139,16 +130,25 @@ board.unshift(Array(col).fill(null));
 
 if(lines){
 score+=lines*100;
-document.getElementById("score").innerText="🏆 分数: "+score;
+clr.currentTime=0;
+clr.play();
+saveScore();
 }
+updateRank();
 }
 
-// 💥 消除特效
-function flash(){
-canvas.style.boxShadow="0 0 40px white";
-setTimeout(()=>{
-canvas.style.boxShadow="0 0 20px cyan";
-},100);
+function saveScore(){
+let list=JSON.parse(localStorage.getItem("rank")||"[]");
+list.push(score);
+list.sort((a,b)=>b-a);
+list=list.slice(0,5);
+localStorage.setItem("rank",JSON.stringify(list));
+}
+
+function updateRank(){
+let list=JSON.parse(localStorage.getItem("rank")||"[]");
+document.getElementById("rank").innerHTML=
+"🏅 排行榜<br>"+list.map((s,i)=>`${i+1}. ${s}`).join("<br>");
 }
 
 function drop(){
@@ -158,6 +158,8 @@ piece.y--;
 
 if(piece.y===0){
 alert("💀 游戏结束\n得分："+score);
+saveScore();
+updateRank();
 location.reload();
 return;
 }
@@ -165,7 +167,7 @@ return;
 merge();
 clearLines();
 piece=nextPiece;
-nextPiece=newNext();
+nextPiece=newPiece();
 }
 }
 
@@ -173,6 +175,9 @@ function moveLeft(){piece.x--;if(collide(piece))piece.x++;}
 function moveRight(){piece.x++;if(collide(piece))piece.x--;}
 
 function rotate(){
+rot.currentTime=0;
+rot.play();
+
 let n=piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
 let old=piece.shape;
 piece.shape=n;
@@ -203,7 +208,6 @@ ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-2,grid-2);
 }
 }));
 
-// next
 nctx.clearRect(0,0,120,120);
 nextPiece.shape.forEach((r,y)=>r.forEach((v,x)=>{
 if(v){
@@ -224,11 +228,14 @@ drop();
 acc=0;
 }
 
+document.getElementById("score").innerText="🏆 分数: "+score;
+
 draw();
 requestAnimationFrame(update);
 }
 
 update();
+updateRank();
 </script>
 
 </body>
