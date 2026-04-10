@@ -1,115 +1,184 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>俄罗斯方块</title>
+<title>Tetris</title>
 <style>
-body {
-  margin: 0;
-  background: #111;
-  color: #fff;
-  text-align: center;
-  font-family: sans-serif;
+body{
+  margin:0;
+  background:#111;
+  color:#fff;
+  text-align:center;
+  font-family:sans-serif;
 }
-canvas {
-  background: #000;
-  display: block;
-  margin: 10px auto;
+canvas{
+  background:#000;
+  margin-top:10px;
 }
-button {
-  padding: 10px;
-  margin: 5px;
-  font-size: 16px;
+.controls button{
+  font-size:20px;
+  margin:5px;
+  padding:10px 15px;
 }
 </style>
 </head>
 <body>
 
-<h2>🎮 俄罗斯方块</h2>
-<div>分数：<span id="score">0</span></div>
+<h2>🎮 Tetris</h2>
+<p>Score: <span id="score">0</span></p>
 
-<canvas id="game"></canvas>
+<canvas id="game" width="200" height="400"></canvas>
 
-<div>
-  <button onclick="move(-1)">⬅</button>
+<div class="controls">
+  <button onclick="move(-1)">⬅️</button>
+  <button onclick="move(1)">➡️</button>
   <button onclick="rotate()">🔄</button>
-  <button onclick="move(1)">➡</button>
-  <button onclick="drop()">⬇</button>
+  <button onclick="drop()">⬇️</button>
 </div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const SIZE = 20;
 
-const COLS = 10;
-const ROWS = 20;
-const SIZE = 30;
+const board = Array.from({length:20},()=>Array(10).fill(0));
 
-canvas.width = COLS * SIZE;
-canvas.height = ROWS * SIZE;
+const colors = ["cyan","blue","orange","yellow","green","purple","red"];
 
-let board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-
-const SHAPES = [
-  [],
-  [[1,1,1,1]],
-  [[1,0,0],[1,1,1]],
-  [[0,0,1],[1,1,1]],
-  [[1,1],[1,1]],
-  [[0,1,1],[1,1,0]],
-  [[0,1,0],[1,1,1]],
-  [[1,1,0],[0,1,1]]
-];
-
-const COLORS = [
-  null,"cyan","blue","orange","yellow","green","purple","red"
+const shapes = [
+ [[1,1,1,1]],
+ [[1,0,0],[1,1,1]],
+ [[0,0,1],[1,1,1]],
+ [[1,1],[1,1]],
+ [[0,1,1],[1,1,0]],
+ [[0,1,0],[1,1,1]],
+ [[1,1,0],[0,1,1]]
 ];
 
 let piece;
+let score = 0;
 
-function newPiece() {
-  let id = Math.floor(Math.random()*7)+1;
+function newPiece(){
+  const i = Math.floor(Math.random()*shapes.length);
   piece = {
-    shape: SHAPES[id],
-    color: COLORS[id],
+    shape: shapes[i],
+    color: colors[i],
     x: 3,
     y: 0
   };
 }
 
-function draw() {
+function drawSquare(x,y,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
+  ctx.strokeStyle="#222";
+  ctx.strokeRect(x*SIZE,y*SIZE,SIZE,SIZE);
+}
+
+function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  board.forEach((row,y)=>{
+    row.forEach((val,x)=>{
+      if(val){
+        drawSquare(x,y,val);
+      }
+    });
+  });
 
   piece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
       if(val){
-        ctx.fillStyle = piece.color;
-        ctx.fillRect((piece.x+x)*SIZE,(piece.y+y)*SIZE,SIZE,SIZE);
+        drawSquare(piece.x+x,piece.y+y,piece.color);
       }
     });
   });
 }
 
-function move(dir){
-  piece.x += dir;
-  draw();
+function collision(){
+  return piece.shape.some((row,y)=>
+    row.some((val,x)=>{
+      if(val){
+        let newX = piece.x+x;
+        let newY = piece.y+y;
+        return (
+          newX < 0 ||
+          newX >= 10 ||
+          newY >= 20 ||
+          (board[newY] && board[newY][newX])
+        );
+      }
+    })
+  );
+}
+
+function merge(){
+  piece.shape.forEach((row,y)=>{
+    row.forEach((val,x)=>{
+      if(val){
+        board[piece.y+y][piece.x+x] = piece.color;
+      }
+    });
+  });
+}
+
+function clearLines(){
+  for(let y=19;y>=0;y--){
+    if(board[y].every(v=>v)){
+      board.splice(y,1);
+      board.unshift(Array(10).fill(0));
+      score+=10;
+      document.getElementById("score").innerText=score;
+    }
+  }
 }
 
 function drop(){
   piece.y++;
+  if(collision()){
+    piece.y--;
+    merge();
+    clearLines();
+    newPiece();
+    if(collision()){
+      alert("💀 Game Over");
+      location.reload();
+    }
+  }
+  draw();
+}
+
+function move(dir){
+  piece.x+=dir;
+  if(collision()){
+    piece.x-=dir;
+  }
   draw();
 }
 
 function rotate(){
-  piece.shape = piece.shape[0].map((_,i)=>
+  const newShape = piece.shape[0].map((_,i)=>
     piece.shape.map(row=>row[i]).reverse()
   );
+  const oldShape = piece.shape;
+  piece.shape = newShape;
+  if(collision()){
+    piece.shape = oldShape;
+  }
   draw();
 }
 
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft") move(-1);
+  if(e.key==="ArrowRight") move(1);
+  if(e.key==="ArrowDown") drop();
+  if(e.key==="ArrowUp") rotate();
+});
+
 newPiece();
-setInterval(drop, 500);
+draw();
+setInterval(drop,500);
 </script>
 
 </body>
