@@ -2,75 +2,49 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>终极俄罗斯方块</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link rel="manifest" href="manifest.json">
+<title>🔥 神级俄罗斯方块 🔥</title>
 
 <style>
-body{
-  margin:0;
-  background:radial-gradient(circle,#000,#020024);
-  color:white;
-  text-align:center;
-  font-family:sans-serif;
+body {
+    margin: 0;
+    background: black;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
 }
 
-h2{
-  text-shadow:0 0 15px cyan;
+h2 {
+    text-shadow: 0 0 10px #0ff;
 }
 
-#container{
-  display:flex;
-  justify-content:center;
-  gap:20px;
+canvas {
+    background: #000;
+    box-shadow: 0 0 20px #0ff;
 }
 
-canvas{
-  background:#000;
-  box-shadow:0 0 20px cyan;
-  border-radius:10px;
-}
-
-#side{
-  text-align:left;
-}
-
-button{
-  width:60px;height:60px;
-  margin:5px;
-  font-size:20px;
-  background:#111;
-  color:white;
-  border:none;
-  border-radius:10px;
-  box-shadow:0 0 10px cyan;
+button {
+    margin: 10px;
+    padding: 15px;
+    font-size: 20px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🔥 终极俄罗斯方块 🔥</h2>
+<h2>🔥 神级俄罗斯方块 🔥</h2>
 
-<div id="container">
-  <canvas id="game" width="300" height="600"></canvas>
+<canvas id="game" width="300" height="600"></canvas>
 
-  <div id="side">
-    <h3>下一块</h3>
-    <canvas id="next" width="120" height="120"></canvas>
-
-    <p>🏆 分数: <span id="score">0</span></p>
-    <p>⚡ 等级: <span id="level">1</span></p>
-  </div>
-</div>
+<div>🏆 分数: <span id="score">0</span></div>
 
 <div>
 <button onclick="move(-1)">⬅</button>
 <button onclick="move(1)">➡</button>
 <button onclick="rotate()">🔄</button>
-<button onclick="softDrop()">⬇</button>
+<button onclick="drop()">⬇</button>
 </div>
 
 <audio id="bgm" src="bgm.mp3" loop></audio>
@@ -79,12 +53,8 @@ button{
 
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
+    navigator.serviceWorker.register('sw.js');
 }
-
-document.body.addEventListener('click', ()=>{
-  document.getElementById('bgm').play().catch(()=>{});
-},{once:true});
 </script>
 
 </body>
