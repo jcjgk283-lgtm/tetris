@@ -18,6 +18,7 @@ canvas {
 button {
     margin: 10px;
     padding: 10px;
+    font-size: 16px;
 }
 </style>
 </head>
@@ -25,12 +26,13 @@ button {
 
 <h2>🎮 俄罗斯方块</h2>
 <div>分数：<span id="score">0</span></div>
-<button onclick="toggleMusic()">🎵 音乐开关</button>
+
+<button id="musicBtn">🎵 播放音乐</button>
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<audio id="bgm" loop>
-<source src="bgm.mp3" type="audio/mpeg">
+<audio id="bgm" loop preload="auto">
+    <source src="bgm.mp3" type="audio/mpeg">
 </audio>
 
 <script>
@@ -43,12 +45,23 @@ const rows = 20;
 let score = 0;
 
 const audio = document.getElementById("bgm");
-function toggleMusic(){
-    if(audio.paused) audio.play();
-    else audio.pause();
-}
-document.body.addEventListener("click",()=>{audio.play().catch(()=>{});},{once:true});
+const btn = document.getElementById("musicBtn");
 
+// 🎵 音乐按钮（修复版）
+btn.addEventListener("click", () => {
+    if (audio.paused) {
+        audio.play().then(() => {
+            btn.innerText = "⏸ 暂停音乐";
+        }).catch(() => {
+            alert("播放失败，请再点一次");
+        });
+    } else {
+        audio.pause();
+        btn.innerText = "🎵 播放音乐";
+    }
+});
+
+// ===== 俄罗斯方块 =====
 const shapes = [
 [[1,1,1,1]],
 [[1,1],[1,1]],
@@ -145,6 +158,7 @@ function rotatePiece(){
     if(collide()) piece.shape=old;
 }
 
+// 键盘控制
 document.addEventListener("keydown",e=>{
     if(e.key==="ArrowLeft") move(-1);
     if(e.key==="ArrowRight") move(1);
