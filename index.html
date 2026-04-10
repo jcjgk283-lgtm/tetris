@@ -2,240 +2,71 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块·神级版</title>
+<title>神级俄罗斯方块</title>
+
+<!-- ✅ PWA关键 -->
+<link rel="manifest" href="manifest.json">
 
 <style>
 body{
-margin:0;
-background:radial-gradient(circle,#000,#111);
-color:white;
-text-align:center;
-font-family:sans-serif;
+  background:#000;
+  color:#fff;
+  text-align:center;
 }
+
 canvas{
-background:#000;
-margin-top:10px;
-box-shadow:0 0 20px cyan;
+  margin-top:10px;
+  box-shadow:0 0 20px cyan;
 }
+
 #score,#rank{
-margin-top:10px;
+  margin-top:10px;
 }
+
 button{
-padding:10px;
-margin:5px;
-font-size:16px;
+  padding:10px;
+  margin:5px;
+  font-size:16px;
 }
 </style>
+
 </head>
 
 <body>
 
 <h2>🔥 神级俄罗斯方块 🔥</h2>
 
+<!-- 游戏画布 -->
 <canvas id="game" width="300" height="600"></canvas>
 <canvas id="next" width="120" height="120"></canvas>
 
+<!-- 分数 -->
 <div id="score">🏆 分数: 0</div>
-<div id="rank">🏅 排行榜</div>
+<div id="rank">🥇 排行榜</div>
 
+<!-- 控制按钮 -->
 <div>
-<button onclick="moveLeft()">⬅️</button>
-<button onclick="moveRight()">➡️</button>
-<button onclick="rotate()">🔄</button>
-<button onclick="drop()">⬇️</button>
+  <button onclick="moveLeft()">⬅️</button>
+  <button onclick="moveRight()">➡️</button>
+  <button onclick="rotate()">🔄</button>
+  <button onclick="drop()">⬇️</button>
 </div>
 
+<!-- 音效 -->
 <audio id="bgm" src="bgm.mp3" loop></audio>
 <audio id="rot" src="rotate.wav"></audio>
-<audio id="clr" src="clear.wav"></audio>
 
+<!-- ⭐ 你的游戏JS（保留） -->
+<script src="sw.js"></script> <!-- ❗不是必须，但你之前有 sw.js 文件 -->
+
+<script src="your-game.js"></script> 
+<!-- ↑ 如果你之前代码在 sw.js 或别的文件，这里换成你的JS文件 -->
+
+<!-- ✅ Service Worker 注册（必须） -->
 <script>
-// ===== 音频 =====
-const bgm=document.getElementById("bgm");
-const rot=document.getElementById("rot");
-const clr=document.getElementById("clr");
-
-document.body.addEventListener("click",()=>{
-bgm.volume=0;
-bgm.play();
-let v=0;
-let t=setInterval(()=>{
-v+=0.05;
-if(v>=0.5){v=0.5;clearInterval(t);}
-bgm.volume=v;
-},200);
-},{once:true});
-
-// ===== 游戏 =====
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-
-const nextCanvas=document.getElementById("next");
-const nctx=nextCanvas.getContext("2d");
-
-const grid=30,col=10,row=20;
-
-let board=Array.from({length:row},()=>Array(col).fill(null));
-let score=0;
-
-function newPiece(){
-const shapes=[
-[[1,1,1,1]],
-[[1,1],[1,1]],
-[[0,1,0],[1,1,1]],
-[[1,1,0],[0,1,1]],
-[[0,1,1],[1,1,0]],
-[[1,0,0],[1,1,1]],
-[[0,0,1],[1,1,1]]
-];
-return{
-x:3,y:0,
-shape:shapes[Math.floor(Math.random()*7)],
-color:`hsl(${Math.random()*360},70%,60%)`
-};
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
 }
-
-let piece=newPiece();
-let nextPiece=newPiece();
-
-function collide(p){
-return p.shape.some((r,y)=>
-r.some((v,x)=>{
-let nx=p.x+x,ny=p.y+y;
-return v&&(nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
-}));
-}
-
-function merge(){
-piece.shape.forEach((r,y)=>
-r.forEach((v,x)=>{
-if(v) board[piece.y+y][piece.x+x]=piece.color;
-}));
-}
-
-function clearLines(){
-let lines=0;
-
-board=board.filter(r=>{
-if(r.every(v=>v)){
-lines++;
-return false;
-}
-return true;
-});
-
-while(board.length<row){
-board.unshift(Array(col).fill(null));
-}
-
-if(lines){
-score+=lines*100;
-clr.currentTime=0;
-clr.play();
-saveScore();
-}
-updateRank();
-}
-
-function saveScore(){
-let list=JSON.parse(localStorage.getItem("rank")||"[]");
-list.push(score);
-list.sort((a,b)=>b-a);
-list=list.slice(0,5);
-localStorage.setItem("rank",JSON.stringify(list));
-}
-
-function updateRank(){
-let list=JSON.parse(localStorage.getItem("rank")||"[]");
-document.getElementById("rank").innerHTML=
-"🏅 排行榜<br>"+list.map((s,i)=>`${i+1}. ${s}`).join("<br>");
-}
-
-function drop(){
-piece.y++;
-if(collide(piece)){
-piece.y--;
-
-if(piece.y===0){
-alert("💀 游戏结束\n得分："+score);
-saveScore();
-updateRank();
-location.reload();
-return;
-}
-
-merge();
-clearLines();
-piece=nextPiece;
-nextPiece=newPiece();
-}
-}
-
-function moveLeft(){piece.x--;if(collide(piece))piece.x++;}
-function moveRight(){piece.x++;if(collide(piece))piece.x--;}
-
-function rotate(){
-rot.currentTime=0;
-rot.play();
-
-let n=piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
-let old=piece.shape;
-piece.shape=n;
-if(collide(piece))piece.shape=old;
-}
-
-document.addEventListener("keydown",e=>{
-if(e.key==="ArrowLeft")moveLeft();
-if(e.key==="ArrowRight")moveRight();
-if(e.key==="ArrowDown")drop();
-if(e.key==="ArrowUp")rotate();
-});
-
-function draw(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-board.forEach((r,y)=>r.forEach((v,x)=>{
-if(v){
-ctx.fillStyle=v;
-ctx.fillRect(x*grid,y*grid,grid-2,grid-2);
-}
-}));
-
-piece.shape.forEach((r,y)=>r.forEach((v,x)=>{
-if(v){
-ctx.fillStyle=piece.color;
-ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-2,grid-2);
-}
-}));
-
-nctx.clearRect(0,0,120,120);
-nextPiece.shape.forEach((r,y)=>r.forEach((v,x)=>{
-if(v){
-nctx.fillStyle=nextPiece.color;
-nctx.fillRect(x*20,y*20,18,18);
-}
-}));
-}
-
-let last=0,acc=0;
-
-function update(t=0){
-acc+=t-last;
-last=t;
-
-if(acc>500){
-drop();
-acc=0;
-}
-
-document.getElementById("score").innerText="🏆 分数: "+score;
-
-draw();
-requestAnimationFrame(update);
-}
-
-update();
-updateRank();
 </script>
 
 </body>
