@@ -17,7 +17,6 @@ canvas{
 button{
     padding:10px;
     margin:5px;
-    font-size:16px;
 }
 .controls{
     margin-top:10px;
@@ -27,10 +26,9 @@ button{
 
 <body>
 
-<h2>🎮 俄罗斯方块</h2>
+<h2>🎮 俄罗斯方块（音乐增强版）</h2>
 
-<!-- 音乐按钮（必须点这个才会响） -->
-<button id="musicBtn">🎵 播放音乐</button>
+<button id="musicBtn">🎵 开启音乐</button>
 
 <canvas id="game" width="300" height="600"></canvas>
 
@@ -41,9 +39,75 @@ button{
     <button onclick="softDrop()">⬇️</button>
 </div>
 
-<audio id="bgm" loop src="bgm.mp3"></audio>
-
 <script>
+// ===== 🎵 音乐系统 =====
+let audioCtx;
+let playing = false;
+let musicTimer;
+
+const melody = [
+    659, 494, 523, 587,
+    523, 494, 440,
+    440, 523, 659,
+    587, 523, 494
+];
+
+function playTone(freq, duration=200){
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = freq;
+    osc.type = "square";
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
+
+    osc.stop(audioCtx.currentTime + duration/1000);
+}
+
+function startMusic(){
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    let i = 0;
+    musicTimer = setInterval(()=>{
+        playTone(melody[i % melody.length], 200);
+        i++;
+    }, 220);
+
+    playing = true;
+}
+
+function stopMusic(){
+    clearInterval(musicTimer);
+    playing = false;
+}
+
+document.getElementById("musicBtn").onclick = function(){
+    if(!playing){
+        startMusic();
+        this.innerText = "🎵 关闭音乐";
+    }else{
+        stopMusic();
+        this.innerText = "🎵 开启音乐";
+    }
+};
+
+// ===== 音效 =====
+function rotateSound(){
+    if(audioCtx) playTone(800,100);
+}
+
+function clearSound(){
+    if(audioCtx) playTone(200,300);
+}
+
+// ===== 游戏逻辑 =====
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -67,74 +131,42 @@ const shapes = [
 
 let piece;
 
-// ===== 音乐（100%成功）=====
-const bgm = document.getElementById("bgm");
-const musicBtn = document.getElementById("musicBtn");
-
-musicBtn.onclick = function(){
-    bgm.play().then(()=>{
-        musicBtn.innerText = "🎵 音乐已开启";
-    }).catch(()=>{
-        alert("请再点一次按钮");
-    });
-};
-
-// ===== 创建方块 =====
 function newPiece(){
-    const index = Math.floor(Math.random()*shapes.length);
-    return {
-        x:3,
-        y:0,
-        shape: shapes[index],
-        color: colors[index]
-    };
+    const i = Math.floor(Math.random()*shapes.length);
+    return {x:3,y:0,shape:shapes[i],color:colors[i]};
 }
 
-// ===== 碰撞 =====
 function collide(p){
-    for(let y=0;y<p.shape.length;y++){
-        for(let x=0;x<p.shape[y].length;x++){
-            if(p.shape[y][x]){
-                let nx = p.x + x;
-                let ny = p.y + y;
-                if(nx<0 || nx>=col || ny>=row || board[ny]?.[nx]){
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
+    return p.shape.some((r,y)=>
+        r.some((v,x)=>{
+            let nx=p.x+x, ny=p.y+y;
+            return v && (nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
+        })
+    );
 }
 
-// ===== 合并 =====
 function merge(){
-    piece.shape.forEach((r,y)=>{
+    piece.shape.forEach((r,y)=>
         r.forEach((v,x)=>{
-            if(v){
-                board[piece.y+y][piece.x+x] = piece.color;
-            }
-        });
-    });
+            if(v) board[piece.y+y][piece.x+x]=piece.color;
+        })
+    );
 }
 
-// ===== 消行 =====
 function clearLines(){
-    board = board.filter(r=>!r.every(v=>v));
-    while(board.length < row){
+    let cleared = false;
+    board = board.filter(r=>{
+        if(r.every(v=>v)){ cleared = true; return false;}
+        return true;
+    });
+    while(board.length<row){
         board.unshift(Array(col).fill(null));
     }
+    if(cleared) clearSound();
 }
 
-// ===== 控制 =====
-function moveLeft(){
-    piece.x--;
-    if(collide(piece)) piece.x++;
-}
-
-function moveRight(){
-    piece.x++;
-    if(collide(piece)) piece.x--;
-}
+function moveLeft(){ piece.x--; if(collide(piece)) piece.x++; }
+function moveRight(){ piece.x++; if(collide(piece)) piece.x--; }
 
 function softDrop(){
     piece.y++;
@@ -146,19 +178,14 @@ function softDrop(){
     }
 }
 
-// ===== 旋转 =====
 function rotate(){
-    const newShape = piece.shape[0].map((_,i)=>
-        piece.shape.map(r=>r[i]).reverse()
-    );
+    const n = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
     const old = piece.shape;
-    piece.shape = newShape;
-    if(collide(piece)){
-        piece.shape = old;
-    }
+    piece.shape = n;
+    if(collide(piece)) piece.shape = old;
+    else rotateSound();
 }
 
-// ===== 键盘 =====
 document.addEventListener("keydown",e=>{
     if(e.key==="ArrowLeft") moveLeft();
     if(e.key==="ArrowRight") moveRight();
@@ -166,52 +193,40 @@ document.addEventListener("keydown",e=>{
     if(e.key==="ArrowUp") rotate();
 });
 
-// ===== 绘制 =====
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    board.forEach((r,y)=>{
-        r.forEach((v,x)=>{
-            if(v){
-                ctx.fillStyle = v;
-                ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
-            }
-        });
-    });
+    board.forEach((r,y)=>r.forEach((v,x)=>{
+        if(v){
+            ctx.fillStyle=v;
+            ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
+        }
+    }));
 
-    piece.shape.forEach((r,y)=>{
-        r.forEach((v,x)=>{
-            if(v){
-                ctx.fillStyle = piece.color;
-                ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-1,grid-1);
-            }
-        });
-    });
+    piece.shape.forEach((r,y)=>r.forEach((v,x)=>{
+        if(v){
+            ctx.fillStyle=piece.color;
+            ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-1,grid-1);
+        }
+    }));
 }
 
-// ===== 游戏循环（丝滑）=====
-let dropCounter = 0;
-let dropInterval = 500;
-let lastTime = 0;
+let dropCounter=0, dropInterval=500, lastTime=0;
 
 function update(time=0){
-    const delta = time - lastTime;
-    lastTime = time;
-
-    dropCounter += delta;
-    if(dropCounter > dropInterval){
+    const delta=time-lastTime;
+    lastTime=time;
+    dropCounter+=delta;
+    if(dropCounter>dropInterval){
         softDrop();
-        dropCounter = 0;
+        dropCounter=0;
     }
-
     draw();
     requestAnimationFrame(update);
 }
 
-// ===== 启动 =====
-piece = newPiece();
+piece=newPiece();
 update();
-
 </script>
 
 </body>
