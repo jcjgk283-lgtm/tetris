@@ -3,16 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>神级俄罗斯方块</title>
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
 
 <style>
-body { text-align:center; font-family:Arial; background:#111; color:#fff; }
-canvas { background:#000; display:block; margin:auto; }
-button { margin:5px; padding:10px; font-size:16px; }
+body{
+  margin:0;
+  background:black;
+  color:white;
+  text-align:center;
+  font-family:sans-serif;
+}
+
+h2{margin:10px;}
+
+canvas{
+  background:#111;
+  box-shadow:0 0 20px cyan;
+}
+
+#panel{
+  margin-top:10px;
+}
+
+button{
+  width:60px;
+  height:60px;
+  margin:5px;
+  font-size:20px;
+}
 </style>
 </head>
 
@@ -20,30 +40,31 @@ button { margin:5px; padding:10px; font-size:16px; }
 
 <h2>🔥 神级俄罗斯方块 🔥</h2>
 
-<canvas id="game" width="240" height="400"></canvas>
+<canvas id="game" width="300" height="600"></canvas>
 
-<div>
-<button onclick="moveLeft()">⬅️</button>
-<button onclick="moveRight()">➡️</button>
-<button onclick="rotateBtn()">🔄</button>
-<button onclick="dropBtn()">⬇️</button>
+<div id="panel">
+  <div>🏆 分数: <span id="score">0</span></div>
+
+  <button onclick="move(-1)">⬅</button>
+  <button onclick="move(1)">➡</button>
+  <button onclick="rotate()">🔄</button>
+  <button onclick="drop()">⬇</button>
 </div>
 
-<!-- 音乐 -->
 <audio id="bgm" src="bgm.mp3" loop></audio>
 
 <script src="game.js"></script>
 
 <script>
-// 👉 点击任意地方开始音乐（浏览器限制）
-document.body.addEventListener("click", ()=>{
-    document.getElementById("bgm").play();
-},{once:true});
-
-// ✅ 注册 SW
+// 注册SW
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
+
+// 自动播放音乐（需用户点击触发）
+document.body.addEventListener('click', ()=>{
+  document.getElementById('bgm').play().catch(()=>{});
+}, {once:true});
 </script>
 
 </body>
