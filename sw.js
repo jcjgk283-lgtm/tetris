@@ -1,14 +1,22 @@
-// 安装时立即激活
-self.addEventListener('install', event => {
-  self.skipWaiting();
+const CACHE_NAME = "game-cache-v1";
+
+self.addEventListener("install", function(e) {
+    e.waitUntil(
+        caches.open(CACHE_NAME).then(function(cache) {
+            return cache.addAll([
+                "./",
+                "./index.html",
+                "./manifest.json",
+                "./icon.png"
+            ]);
+        })
+    );
 });
 
-// 激活
-self.addEventListener('activate', event => {
-  console.log('Service Worker 激活成功');
-});
-
-// 拦截请求（这里先不做缓存也可以）
-self.addEventListener('fetch', event => {
-  // 什么都不做也可以正常触发 PWA 安装
+self.addEventListener("fetch", function(e) {
+    e.respondWith(
+        caches.match(e.request).then(function(response) {
+            return response || fetch(e.request);
+        })
+    );
 });
