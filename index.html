@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- 🚫 禁止缩放 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<title>神级俄罗斯方块</title>
+<title>终极俄罗斯方块</title>
 <link rel="manifest" href="manifest.json">
 
 <style>
@@ -16,57 +15,62 @@ body{
   color:white;
   text-align:center;
   font-family:sans-serif;
-  overflow:hidden;
 }
 
 h2{
-  text-shadow:0 0 10px cyan,0 0 20px cyan;
+  text-shadow:0 0 15px cyan;
+}
+
+#container{
+  display:flex;
+  justify-content:center;
+  gap:20px;
 }
 
 canvas{
-  margin-top:10px;
   background:#000;
-  box-shadow:
-    0 0 20px cyan,
-    inset 0 0 20px rgba(0,255,255,0.3);
+  box-shadow:0 0 20px cyan;
   border-radius:10px;
 }
 
-#panel{
-  margin-top:10px;
+#side{
+  text-align:left;
 }
 
 button{
-  width:60px;
-  height:60px;
+  width:60px;height:60px;
   margin:5px;
-  font-size:22px;
-  border:none;
-  border-radius:10px;
+  font-size:20px;
   background:#111;
   color:white;
+  border:none;
+  border-radius:10px;
   box-shadow:0 0 10px cyan;
-}
-
-button:active{
-  transform:scale(0.9);
 }
 </style>
 </head>
 
 <body>
 
-<h2>🔥 神级俄罗斯方块 🔥</h2>
+<h2>🔥 终极俄罗斯方块 🔥</h2>
 
-<canvas id="game" width="300" height="600"></canvas>
+<div id="container">
+  <canvas id="game" width="300" height="600"></canvas>
 
-<div id="panel">
-  🏆 分数: <span id="score">0</span><br>
+  <div id="side">
+    <h3>下一块</h3>
+    <canvas id="next" width="120" height="120"></canvas>
 
-  <button onclick="move(-1)">⬅</button>
-  <button onclick="move(1)">➡</button>
-  <button onclick="rotate()">🔄</button>
-  <button onclick="softDrop()">⬇</button>
+    <p>🏆 分数: <span id="score">0</span></p>
+    <p>⚡ 等级: <span id="level">1</span></p>
+  </div>
+</div>
+
+<div>
+<button onclick="move(-1)">⬅</button>
+<button onclick="move(1)">➡</button>
+<button onclick="rotate()">🔄</button>
+<button onclick="softDrop()">⬇</button>
 </div>
 
 <audio id="bgm" src="bgm.mp3" loop></audio>
@@ -78,10 +82,9 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
 
-// 点击后播放音乐（解决浏览器限制）
 document.body.addEventListener('click', ()=>{
   document.getElementById('bgm').play().catch(()=>{});
-}, {once:true});
+},{once:true});
 </script>
 
 </body>
