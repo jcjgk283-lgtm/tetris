@@ -24,30 +24,36 @@ function newPiece(){
   y = 0;
 
   if(collision(x,y,piece)){
-    alert("游戏结束！");
+    alert("游戏结束");
     location.reload();
   }
+}
+
+function drawBlock(px, py, color){
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.fillRect(px, py, SIZE, SIZE);
+  ctx.shadowBlur = 0;
 }
 
 function draw(){
   ctx.clearRect(0,0,300,600);
 
-  // 画已固定方块
+  // 已固定
   for(let r=0;r<ROW;r++){
     for(let c=0;c<COL;c++){
       if(board[r][c]){
-        ctx.fillStyle="cyan";
-        ctx.fillRect(c*SIZE,r*SIZE,SIZE,SIZE);
+        drawBlock(c*SIZE,r*SIZE,"cyan");
       }
     }
   }
 
-  // 画当前块
-  ctx.fillStyle="red";
+  // 当前块
   piece.forEach((row,i)=>{
     row.forEach((v,j)=>{
       if(v){
-        ctx.fillRect((x+j)*SIZE,(y+i)*SIZE,SIZE,SIZE);
+        drawBlock((x+j)*SIZE,(y+i)*SIZE,"red");
       }
     });
   });
@@ -59,7 +65,6 @@ function collision(nx,ny,p){
       if(!v) return false;
       let newX = nx + j;
       let newY = ny + i;
-
       return newX<0 || newX>=COL || newY>=ROW || board[newY]?.[newX];
     })
   );
@@ -69,7 +74,7 @@ function merge(){
   piece.forEach((row,i)=>{
     row.forEach((v,j)=>{
       if(v){
-        board[y+i][x+j] = 1;
+        board[y+i][x+j]=1;
       }
     });
   });
@@ -90,39 +95,61 @@ function clearLines(){
 function move(dir){
   if(!collision(x+dir,y,piece)){
     x+=dir;
-    draw();
   }
 }
 
-function drop(){
+function softDrop(){
   if(!collision(x,y+1,piece)){
     y++;
-  }else{
-    merge();
-    clearLines();
-    newPiece();
   }
-  draw();
+}
+
+function hardDrop(){
+  while(!collision(x,y+1,piece)){
+    y++;
+  }
 }
 
 function rotate(){
   let newP = piece[0].map((_,i)=>piece.map(r=>r[i]).reverse());
   if(!collision(x,y,newP)){
     piece=newP;
-    draw();
   }
 }
 
-// 自动下落
-setInterval(drop,700);
+// 🎮 游戏循环（流畅关键）
+let lastTime = 0;
+let dropCounter = 0;
+let dropInterval = 700;
+
+function update(time=0){
+  const delta = time - lastTime;
+  lastTime = time;
+  dropCounter += delta;
+
+  if(dropCounter > dropInterval){
+    if(!collision(x,y+1,piece)){
+      y++;
+    }else{
+      merge();
+      clearLines();
+      newPiece();
+    }
+    dropCounter = 0;
+  }
+
+  draw();
+  requestAnimationFrame(update);
+}
 
 newPiece();
-draw();
+update();
 
-// 键盘支持
+// 键盘
 document.addEventListener("keydown",(e)=>{
   if(e.key==="ArrowLeft") move(-1);
   if(e.key==="ArrowRight") move(1);
-  if(e.key==="ArrowDown") drop();
+  if(e.key==="ArrowDown") softDrop();
+  if(e.key===" ") hardDrop();
   if(e.key==="ArrowUp") rotate();
 });
