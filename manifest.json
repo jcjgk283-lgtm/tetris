@@ -7,8 +7,13 @@
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "https://你的用户名.github.io/tetris/icon.png",
+      "src": "icon.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
