@@ -2,100 +2,171 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块</title>
+<title>终极俄罗斯方块</title>
 <style>
-body {
-    margin: 0;
-    background: black;
-    color: white;
-    text-align: center;
-    font-family: sans-serif;
+body{
+    margin:0;
+    background:black;
+    color:white;
+    text-align:center;
+    font-family:sans-serif;
 }
-canvas {
-    background: #111;
-    margin-top: 10px;
+canvas{
+    background:#111;
+    margin-top:10px;
 }
-button {
-    margin: 10px;
-    padding: 10px;
-    font-size: 16px;
+select,button{
+    margin:5px;
+    padding:8px;
+    font-size:14px;
 }
 </style>
 </head>
+
 <body>
 
-<h2>🎮 俄罗斯方块</h2>
-<div>分数：<span id="score">0</span></div>
+<h2>🎮 俄罗斯方块（终极版）</h2>
 
-<button id="musicBtn">🎵 播放音乐</button>
+<select id="musicSelect">
+    <option value="bgm.mp3">🎵 默认音乐</option>
+    <option value="music2.mp3">🎵 音乐2</option>
+</select>
+
+<button onclick="changeMusic()">切换音乐</button>
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<audio id="bgm" loop preload="auto">
-    <source src="bgm.mp3" type="audio/mpeg">
-</audio>
+<!-- 背景音乐 -->
+<audio id="bgm" loop></audio>
+
+<!-- 音效 -->
+<audio id="rotateSound" src="rotate.mp3"></audio>
+<audio id="clearSound" src="clear.mp3"></audio>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
 const grid = 30;
-const cols = 10;
-const rows = 20;
+const col = 10;
+const row = 20;
 
-let score = 0;
+let board = Array.from({length: row}, ()=>Array(col).fill(0));
 
-const audio = document.getElementById("bgm");
-const btn = document.getElementById("musicBtn");
-
-// 🎵 音乐按钮（修复版）
-btn.addEventListener("click", () => {
-    if (audio.paused) {
-        audio.play().then(() => {
-            btn.innerText = "⏸ 暂停音乐";
-        }).catch(() => {
-            alert("播放失败，请再点一次");
-        });
-    } else {
-        audio.pause();
-        btn.innerText = "🎵 播放音乐";
-    }
-});
-
-// ===== 俄罗斯方块 =====
+// ===== 方块定义 =====
 const shapes = [
-[[1,1,1,1]],
-[[1,1],[1,1]],
-[[0,1,0],[1,1,1]],
-[[1,0,0],[1,1,1]],
-[[0,0,1],[1,1,1]],
-[[1,1,0],[0,1,1]],
-[[0,1,1],[1,1,0]]
+    [[1,1,1,1]], // I
+    [[1,1],[1,1]], // O
+    [[0,1,0],[1,1,1]], // T
+    [[1,1,0],[0,1,1]], // S
+    [[0,1,1],[1,1,0]], // Z
+    [[1,0,0],[1,1,1]], // J
+    [[0,0,1],[1,1,1]]  // L
 ];
 
-let board = Array.from({length: rows},()=>Array(cols).fill(0));
+let piece = null;
 
-function newPiece(){
-    const shape = shapes[Math.floor(Math.random()*shapes.length)];
-    return {x:3,y:0,shape};
+// ===== 音乐控制 =====
+const bgm = document.getElementById("bgm");
+const rotateSound = document.getElementById("rotateSound");
+const clearSound = document.getElementById("clearSound");
+
+// 自动解锁播放
+document.body.addEventListener("click", ()=>{
+    bgm.play().catch(()=>{});
+},{once:true});
+
+function changeMusic(){
+    const val = document.getElementById("musicSelect").value;
+    bgm.src = val;
+    bgm.play().catch(()=>{});
 }
 
-let piece = newPiece();
+// ===== 创建方块 =====
+function newPiece(){
+    const shape = shapes[Math.floor(Math.random()*shapes.length)];
+    return {
+        x:3,
+        y:0,
+        shape
+    };
+}
 
+// ===== 碰撞检测 =====
+function collide(p){
+    for(let y=0;y<p.shape.length;y++){
+        for(let x=0;x<p.shape[y].length;x++){
+            if(p.shape[y][x]){
+                let nx = p.x + x;
+                let ny = p.y + y;
+                if(nx<0 || nx>=col || ny>=row || board[ny]?.[nx]){
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// ===== 合并方块 =====
+function merge(){
+    piece.shape.forEach((row,y)=>{
+        row.forEach((val,x)=>{
+            if(val){
+                board[piece.y+y][piece.x+x] = val;
+            }
+        });
+    });
+}
+
+// ===== 消行 =====
+function clearLines(){
+    let cleared = 0;
+    board = board.filter(r=>{
+        if(r.every(v=>v)){
+            cleared++;
+            return false;
+        }
+        return true;
+    });
+    while(board.length < row){
+        board.unshift(Array(col).fill(0));
+    }
+    if(cleared){
+        clearSound.play();
+    }
+}
+
+// ===== 旋转 =====
+function rotate(){
+    const newShape = piece.shape[0].map((_,i)=>
+        piece.shape.map(r=>r[i]).reverse()
+    );
+    const old = piece.shape;
+    piece.shape = newShape;
+    if(collide(piece)){
+        piece.shape = old;
+    }else{
+        rotateSound.play();
+    }
+}
+
+// ===== 绘制 =====
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    board.forEach((row,y)=>{
-        row.forEach((val,x)=>{
-            if(val){
+    board.forEach((r,y)=>{
+        r.forEach((v,x)=>{
+            if(v){
                 ctx.fillStyle="cyan";
                 ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
             }
         });
     });
 
-    piece.shape.forEach((row,y)=>{
-        row.forEach((val,x)=>{
-            if(val){
+    piece.shape.forEach((r,y)=>{
+        r.forEach((v,x)=>{
+            if(v){
                 ctx.fillStyle="orange";
                 ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-1,grid-1);
             }
@@ -103,83 +174,51 @@ function draw(){
     });
 }
 
-function collide(){
-    return piece.shape.some((row,y)=>
-        row.some((val,x)=>{
-            return val &&
-            (board[piece.y+y] &&
-             board[piece.y+y][piece.x+x]) !== 0;
-        })
-    );
-}
-
-function merge(){
-    piece.shape.forEach((row,y)=>{
-        row.forEach((val,x)=>{
-            if(val){
-                board[piece.y+y][piece.x+x]=1;
-            }
-        });
-    });
-}
-
-function rotate(shape){
-    return shape[0].map((_,i)=>shape.map(r=>r[i]).reverse());
-}
-
-function clearLines(){
-    board = board.filter(row=>row.some(v=>!v));
-    while(board.length<rows){
-        board.unshift(Array(cols).fill(0));
-        score+=10;
-    }
-    document.getElementById("score").innerText=score;
-}
-
+// ===== 下落 =====
 function drop(){
     piece.y++;
-    if(collide()){
+    if(collide(piece)){
         piece.y--;
         merge();
         clearLines();
-        piece=newPiece();
+        piece = newPiece();
     }
-    draw();
 }
 
-function move(dx){
-    piece.x+=dx;
-    if(collide()) piece.x-=dx;
-}
-
-function rotatePiece(){
-    const old=piece.shape;
-    piece.shape=rotate(piece.shape);
-    if(collide()) piece.shape=old;
-}
-
-// 键盘控制
+// ===== 控制 =====
 document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft") move(-1);
-    if(e.key==="ArrowRight") move(1);
+    if(e.key==="ArrowLeft") piece.x--;
+    if(e.key==="ArrowRight") piece.x++;
     if(e.key==="ArrowDown") drop();
-    if(e.key==="ArrowUp") rotatePiece();
+    if(e.key==="ArrowUp") rotate();
+    if(collide(piece)){
+        if(e.key==="ArrowLeft") piece.x++;
+        if(e.key==="ArrowRight") piece.x--;
+    }
 });
 
-// 手机触控
+// ===== 手势（手机）=====
 let startX=0;
-document.addEventListener("touchstart",e=>{
-    startX=e.touches[0].clientX;
+canvas.addEventListener("touchstart",e=>{
+    startX = e.touches[0].clientX;
 });
-document.addEventListener("touchend",e=>{
-    let dx=e.changedTouches[0].clientX-startX;
-    if(dx>30) move(1);
-    else if(dx<-30) move(-1);
-    else rotatePiece();
+canvas.addEventListener("touchend",e=>{
+    let dx = e.changedTouches[0].clientX - startX;
+    if(dx>30) piece.x++;
+    else if(dx<-30) piece.x--;
+    else rotate();
 });
 
-setInterval(drop,600);
+// ===== 主循环 =====
+piece = newPiece();
+
+setInterval(()=>{
+    drop();
+    draw();
+},500);
+
 draw();
+
 </script>
 
 </body>
