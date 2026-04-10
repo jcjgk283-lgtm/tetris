@@ -1,22 +1,24 @@
-const CACHE_NAME = "game-cache-v1";
+const CACHE = "tetris-v1";
 
-self.addEventListener("install", function(e) {
+self.addEventListener("install", e=>{
     e.waitUntil(
-        caches.open(CACHE_NAME).then(function(cache) {
+        caches.open(CACHE).then(cache=>{
             return cache.addAll([
                 "./",
                 "./index.html",
+                "./game.js",
                 "./manifest.json",
-                "./icon.png"
+                "./icon.png",
+                "./bgm.mp3"
             ]);
         })
     );
 });
 
-self.addEventListener("fetch", function(e) {
+self.addEventListener("fetch", e=>{
     e.respondWith(
-        caches.match(e.request).then(function(response) {
-            return response || fetch(e.request);
+        caches.match(e.request).then(res=>{
+            return res || fetch(e.request);
         })
     );
 });
