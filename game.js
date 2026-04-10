@@ -1,177 +1,118 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-const nextCanvas = document.getElementById("next");
-const nextCtx = nextCanvas.getContext("2d");
+const ROW = 20;
+const COL = 10;
+const SIZE = 30;
 
-const COL=10, ROW=20, SIZE=30;
+let board = Array.from({length: ROW}, () => Array(COL).fill(0));
 
-const COLORS=["cyan","yellow","purple","green","red","blue","orange"];
-
-const SHAPES=[
-[[1,1,1,1]],
-[[1,1],[1,1]],
-[[0,1,0],[1,1,1]],
-[[1,1,0],[0,1,1]],
-[[0,1,1],[1,1,0]],
-[[1,0,0],[1,1,1]],
-[[0,0,1],[1,1,1]]
+const SHAPES = [
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,1,0],[0,1,1]],
+    [[0,1,1],[1,1,0]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
 ];
 
-let board=Array.from({length:ROW},()=>Array(COL).fill(0));
+let piece, x, y;
+let score = 0;
 
-let current,next;
-let score=0,level=1;
-
-function newPiece(){
-  return {
-    shape:SHAPES[Math.floor(Math.random()*7)],
-    color:COLORS[Math.floor(Math.random()*7)],
-    x:3,y:0
-  };
+function newPiece() {
+    piece = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+    x = 3;
+    y = 0;
 }
 
-current=newPiece();
-next=newPiece();
-
-function drawBlock(x,y,color,ctx2=ctx){
-  ctx2.fillStyle=color;
-  ctx2.shadowColor=color;
-  ctx2.shadowBlur=10;
-  ctx2.fillRect(x,y,SIZE,SIZE);
-  ctx2.shadowBlur=0;
+function drawCell(x,y,color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
 }
 
-function draw(){
-  ctx.clearRect(0,0,300,600);
+function draw() {
+    ctx.clearRect(0,0,300,600);
 
-  for(let r=0;r<ROW;r++){
-    for(let c=0;c<COL;c++){
-      if(board[r][c]){
-        drawBlock(c*SIZE,r*SIZE,board[r][c]);
-      }
+    board.forEach((row,r)=>{
+        row.forEach((v,c)=>{
+            if(v) drawCell(c,r,"cyan");
+        });
+    });
+
+    piece.forEach((row,i)=>{
+        row.forEach((v,j)=>{
+            if(v) drawCell(x+j,y+i,"orange");
+        });
+    });
+}
+
+function collide(nx,ny,npiece){
+    for(let i=0;i<npiece.length;i++){
+        for(let j=0;j<npiece[i].length;j++){
+            if(npiece[i][j]){
+                let newX = nx+j;
+                let newY = ny+i;
+                if(newX<0||newX>=COL||newY>=ROW) return true;
+                if(board[newY] && board[newY][newX]) return true;
+            }
+        }
     }
-  }
-
-  current.shape.forEach((row,i)=>{
-    row.forEach((v,j)=>{
-      if(v){
-        drawBlock((current.x+j)*SIZE,(current.y+i)*SIZE,current.color);
-      }
-    });
-  });
-
-  drawNext();
-}
-
-function drawNext(){
-  nextCtx.clearRect(0,0,120,120);
-  next.shape.forEach((row,i)=>{
-    row.forEach((v,j)=>{
-      if(v){
-        drawBlock(j*20,i*20,next.color,nextCtx);
-      }
-    });
-  });
-}
-
-function collide(px,py,shape){
-  return shape.some((row,i)=>
-    row.some((v,j)=>{
-      if(!v) return false;
-      let x=px+j,y=py+i;
-      return x<0||x>=COL||y>=ROW||board[y]?.[x];
-    })
-  );
+    return false;
 }
 
 function merge(){
-  current.shape.forEach((row,i)=>{
-    row.forEach((v,j)=>{
-      if(v){
-        board[current.y+i][current.x+j]=current.color;
-      }
+    piece.forEach((row,i)=>{
+        row.forEach((v,j)=>{
+            if(v) board[y+i][x+j]=1;
+        });
     });
-  });
 }
 
 function clearLines(){
-  let lines=0;
-  for(let r=ROW-1;r>=0;r--){
-    if(board[r].every(v=>v)){
-      board.splice(r,1);
-      board.unshift(Array(COL).fill(0));
-      lines++;
-      r++;
+    board = board.filter(row=>row.some(v=>!v));
+    while(board.length<ROW){
+        board.unshift(Array(COL).fill(0));
+        score+=10;
     }
-  }
-
-  if(lines){
-    score+=lines*10;
-    level=Math.floor(score/50)+1;
-    document.getElementById("score").innerText=score;
-    document.getElementById("level").innerText=level;
-  }
-}
-
-function drop(){
-  if(!collide(current.x,current.y+1,current.shape)){
-    current.y++;
-  }else{
-    merge();
-    clearLines();
-    current=next;
-    next=newPiece();
-
-    if(collide(current.x,current.y,current.shape)){
-      alert("游戏结束");
-      location.reload();
-    }
-  }
-}
-
-function move(dir){
-  if(!collide(current.x+dir,current.y,current.shape)){
-    current.x+=dir;
-  }
-}
-
-function softDrop(){
-  drop();
+    document.getElementById("score").innerText = score;
 }
 
 function rotate(){
-  let newShape=current.shape[0].map((_,i)=>current.shape.map(r=>r[i]).reverse());
-  if(!collide(current.x,current.y,newShape)){
-    current.shape=newShape;
-  }
+    let newPiece = piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());
+    if(!collide(x,y,newPiece)) piece = newPiece;
 }
 
-// 游戏循环
-let last=0,acc=0;
+function move(dir){
+    if(!collide(x+dir,y,piece)) x+=dir;
+}
 
-function loop(time=0){
-  const delta=time-last;
-  last=time;
-  acc+=delta;
+function drop(){
+    if(!collide(x,y+1,piece)){
+        y++;
+    } else {
+        merge();
+        clearLines();
+        newPiece();
+    }
+}
 
-  let speed=700-Math.min(level*50,500);
-
-  if(acc>speed){
+function loop(){
     drop();
-    acc=0;
-  }
-
-  draw();
-  requestAnimationFrame(loop);
+    draw();
+    requestAnimationFrame(loop);
 }
 
-loop();
-
-// 键盘
 document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowLeft") move(-1);
-  if(e.key==="ArrowRight") move(1);
-  if(e.key==="ArrowDown") softDrop();
-  if(e.key==="ArrowUp") rotate();
+    if(e.key==="ArrowLeft") move(-1);
+    if(e.key==="ArrowRight") move(1);
+    if(e.key==="ArrowUp") rotate();
+    if(e.key==="ArrowDown") drop();
 });
+
+document.body.addEventListener("click",()=>{
+    document.getElementById("bgm").play();
+});
+
+newPiece();
+loop();
