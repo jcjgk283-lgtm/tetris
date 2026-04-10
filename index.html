@@ -2,79 +2,65 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块·毕业版</title>
+<title>俄罗斯方块·免文件版</title>
 <style>
-body{
-    margin:0;
-    background:black;
-    color:white;
-    text-align:center;
-}
-canvas{
-    background:#111;
-    margin-top:10px;
-}
-button, select, input{
-    margin:5px;
-    padding:8px;
-}
+body{margin:0;background:black;color:white;text-align:center;}
+canvas{background:#111;margin-top:10px;}
+button,select{margin:5px;padding:8px;}
 </style>
 </head>
 
 <body>
 
-<h2>🎮 俄罗斯方块·毕业版</h2>
+<h2>🎮 俄罗斯方块·免文件音乐版</h2>
 
 <button onclick="toggleMusic()">🎵 播放 / 暂停</button>
 
 <select onchange="changeMusic(this.value)">
-    <option value="bgm1.mp3">🎵 音乐1</option>
-    <option value="bgm2.mp3">🎵 音乐2</option>
+<option value="1">🎵 经典电子</option>
+<option value="2">🎵 节奏快</option>
+<option value="3">🎵 放松</option>
 </select>
-
-<br>
-
-<label>🔊 音量</label>
-<input type="range" min="0" max="1" step="0.01" value="0.5" onchange="setVolume(this.value)">
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<audio id="bgm" loop src="bgm1.mp3"></audio>
-
 <script>
-// ===== 🎵 音乐系统 =====
-const bgm = document.getElementById("bgm");
-
-function toggleMusic(){
-    if(bgm.paused){
-        bgm.play();
-    }else{
-        bgm.pause();
-    }
-}
-
-function changeMusic(src){
-    bgm.src = src;
-    bgm.play();
-}
-
-function setVolume(v){
-    bgm.volume = v;
-}
-
-// 👉 解决“必须点击才播放”
-document.body.addEventListener("click",()=>{
-    bgm.play().catch(()=>{});
-},{once:true});
-
-
-// ===== 🎮 音效（WebAudio）=====
+// ===== 🎵 内置音乐系统（WebAudio）=====
 let audioCtx;
+let musicTimer;
+let currentStyle = 1;
 
-function sound(freq, time=0.1){
+function startMusic(){
     if(!audioCtx){
         audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     }
+
+    stopMusic();
+
+    if(currentStyle==1) playClassic();
+    if(currentStyle==2) playFast();
+    if(currentStyle==3) playChill();
+}
+
+function stopMusic(){
+    if(musicTimer) clearInterval(musicTimer);
+}
+
+function toggleMusic(){
+    if(musicTimer){
+        stopMusic();
+        musicTimer=null;
+    }else{
+        startMusic();
+    }
+}
+
+function changeMusic(v){
+    currentStyle = v;
+    startMusic();
+}
+
+function note(freq, duration=0.2){
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
@@ -82,26 +68,59 @@ function sound(freq, time=0.1){
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    gain.gain.value = 0.2;
+    gain.gain.value = 0.1;
 
     osc.start();
-    osc.stop(audioCtx.currentTime + time);
+    osc.stop(audioCtx.currentTime + duration);
 }
 
-function rotateSound(){ sound(800,0.1); }
-function clearSound(){ sound(200,0.2); }
+// 🎵 风格1（类似俄罗斯方块）
+function playClassic(){
+    const seq=[659,494,523,587,523,494,440,440,523,659,587,523,494];
+    let i=0;
+    musicTimer=setInterval(()=>{
+        note(seq[i%seq.length]);
+        i++;
+    },200);
+}
+
+// 🎵 风格2（快节奏）
+function playFast(){
+    const seq=[880,660,990,770,880,660];
+    let i=0;
+    musicTimer=setInterval(()=>{
+        note(seq[i%seq.length],0.1);
+        i++;
+    },120);
+}
+
+// 🎵 风格3（放松）
+function playChill(){
+    const seq=[262,330,392,330];
+    let i=0;
+    musicTimer=setInterval(()=>{
+        note(seq[i%seq.length],0.4);
+        i++;
+    },400);
+}
+
+// 👉 点击页面解锁音频
+document.body.addEventListener("click",()=>{
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    }
+},{once:true});
 
 
-// ===== 🎮 游戏（稳定版）=====
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+// ===== 🎮 游戏 =====
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-const grid=30, col=10, row=20;
+const grid=30,col=10,row=20;
 
-let board = Array.from({length:row},()=>Array(col).fill(null));
+let board=Array.from({length:row},()=>Array(col).fill(null));
 
 const colors=["cyan","yellow","purple","green","red","blue","orange"];
-
 const shapes=[
 [[1,1,1,1]],
 [[1,1],[1,1]],
@@ -145,7 +164,7 @@ function clearLines(){
     while(board.length<row){
         board.unshift(Array(col).fill(null));
     }
-    if(cleared) clearSound();
+    if(cleared) sound(200,0.2);
 }
 
 function moveLeft(){piece.x--;if(collide(piece))piece.x++;}
@@ -166,7 +185,7 @@ function rotate(){
     let old=piece.shape;
     piece.shape=n;
     if(collide(piece))piece.shape=old;
-    else rotateSound();
+    else sound(800,0.1);
 }
 
 document.addEventListener("keydown",e=>{
@@ -176,6 +195,19 @@ document.addEventListener("keydown",e=>{
     if(e.key==="ArrowUp")rotate();
 });
 
+// 音效
+function sound(freq,time){
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.frequency.value=freq;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    gain.gain.value=0.2;
+    osc.start();
+    osc.stop(audioCtx.currentTime+time);
+}
+
+// 渲染
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -211,7 +243,6 @@ function update(t=0){
 
 piece=newPiece();
 update();
-
 </script>
 
 </body>
