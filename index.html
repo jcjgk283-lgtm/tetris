@@ -1,71 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>神级俄罗斯方块</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- ✅ PWA关键 -->
+<title>我的游戏</title>
+
+<!-- PWA -->
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
 
 <style>
-body{
-  background:#000;
-  color:#fff;
-  text-align:center;
+body {
+    text-align: center;
+    font-family: Arial;
 }
 
-canvas{
-  margin-top:10px;
-  box-shadow:0 0 20px cyan;
+#game {
+    width: 200px;
+    height: 200px;
+    background: red;
+    position: relative;
+    margin: auto;
 }
 
-#score,#rank{
-  margin-top:10px;
+#player {
+    width: 50px;
+    height: 50px;
+    background: blue;
+    position: absolute;
+    left: 75px;
+    top: 75px;
 }
 
-button{
-  padding:10px;
-  margin:5px;
-  font-size:16px;
+button {
+    margin: 10px;
+    padding: 10px;
 }
 </style>
-
 </head>
 
 <body>
 
-<h2>🔥 神级俄罗斯方块 🔥</h2>
+<h2>小游戏</h2>
 
-<!-- 游戏画布 -->
-<canvas id="game" width="300" height="600"></canvas>
-<canvas id="next" width="120" height="120"></canvas>
-
-<!-- 分数 -->
-<div id="score">🏆 分数: 0</div>
-<div id="rank">🥇 排行榜</div>
+<div id="game">
+    <div id="player"></div>
+</div>
 
 <!-- 控制按钮 -->
 <div>
-  <button onclick="moveLeft()">⬅️</button>
-  <button onclick="moveRight()">➡️</button>
-  <button onclick="rotate()">🔄</button>
-  <button onclick="drop()">⬇️</button>
+    <button onclick="moveLeft()">⬅</button>
+    <button onclick="moveRight()">➡</button>
+    <button onclick="moveUp()">⬆</button>
+    <button onclick="moveDown()">⬇</button>
 </div>
 
-<!-- 音效 -->
-<audio id="bgm" src="bgm.mp3" loop></audio>
-<audio id="rot" src="rotate.wav"></audio>
-
-<!-- ⭐ 你的游戏JS（保留） -->
-<script src="sw.js"></script> <!-- ❗不是必须，但你之前有 sw.js 文件 -->
-
-<script src="your-game.js"></script> 
-<!-- ↑ 如果你之前代码在 sw.js 或别的文件，这里换成你的JS文件 -->
-
-<!-- ✅ Service Worker 注册（必须） -->
 <script>
+let x = 75;
+let y = 75;
+
+function update() {
+    const player = document.getElementById("player");
+    player.style.left = x + "px";
+    player.style.top = y + "px";
+}
+
+function moveLeft() { x -= 10; update(); }
+function moveRight() { x += 10; update(); }
+function moveUp() { y -= 10; update(); }
+function moveDown() { y += 10; update(); }
+
+// ✅ 注册 Service Worker（正确方式）
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
+    navigator.serviceWorker.register('sw.js');
 }
 </script>
 
