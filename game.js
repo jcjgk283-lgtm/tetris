@@ -1,55 +1,42 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const ROW = 20;
-const COL = 12;
 const SIZE = 20;
 
-let board = Array.from({length:ROW},()=>Array(COL).fill(0));
-
-const shapes = [
- [[1,1,1,1]],
- [[1,1],[1,1]],
- [[0,1,0],[1,1,1]],
-];
-
-let piece = shapes[Math.floor(Math.random()*shapes.length)];
-let x = 4, y = 0;
+let x = 5;
+let y = 0;
 
 function draw(){
     ctx.clearRect(0,0,240,400);
-    ctx.fillStyle="red";
-    piece.forEach((row,i)=>{
-        row.forEach((v,j)=>{
-            if(v){
-                ctx.fillRect((x+j)*SIZE,(y+i)*SIZE,SIZE,SIZE);
-            }
-        });
-    });
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(x*SIZE, y*SIZE, SIZE, SIZE);
 }
 
+// 按钮控制
 function move(dir){
-    x+=dir;
+    x += dir;
     draw();
 }
 
 function drop(){
-    y++;
+    y += 1;
     draw();
 }
 
 function rotate(){
-    piece = piece[0].map((_,i)=>piece.map(r=>r[i])).reverse();
-    draw();
+    // 简化：先不做旋转逻辑
+    alert("旋转成功（演示）");
 }
 
+// 自动下落
 setInterval(()=>{
     y++;
-    if(y>18){
-        y=0;
-        x=4;
+    if(y > 18){
+        y = 0;
     }
     draw();
-},500);
+}, 500);
 
+// 初始化
 draw();
