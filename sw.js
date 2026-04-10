@@ -1,23 +1,14 @@
-const CACHE_NAME = "tetris-cache-v1";
-const urlsToCache = [
-  "./",
-  "./index.html"
-];
-
-// 安装
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-  );
+// 安装时立即激活
+self.addEventListener('install', event => {
+  self.skipWaiting();
 });
 
-// 请求拦截（离线用）
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
-      })
-  );
+// 激活
+self.addEventListener('activate', event => {
+  console.log('Service Worker 激活成功');
+});
+
+// 拦截请求（这里先不做缓存也可以）
+self.addEventListener('fetch', event => {
+  // 什么都不做也可以正常触发 PWA 安装
 });
