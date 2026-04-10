@@ -2,25 +2,34 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>神级俄罗斯方块</title>
 
+<!-- 🚫 禁止缩放 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>神级俄罗斯方块</title>
 <link rel="manifest" href="manifest.json">
 
 <style>
 body{
   margin:0;
-  background:black;
+  background:radial-gradient(circle,#000,#020024);
   color:white;
   text-align:center;
   font-family:sans-serif;
+  overflow:hidden;
 }
 
-h2{margin:10px;}
+h2{
+  text-shadow:0 0 10px cyan,0 0 20px cyan;
+}
 
 canvas{
-  background:#111;
-  box-shadow:0 0 20px cyan;
+  margin-top:10px;
+  background:#000;
+  box-shadow:
+    0 0 20px cyan,
+    inset 0 0 20px rgba(0,255,255,0.3);
+  border-radius:10px;
 }
 
 #panel{
@@ -31,7 +40,16 @@ button{
   width:60px;
   height:60px;
   margin:5px;
-  font-size:20px;
+  font-size:22px;
+  border:none;
+  border-radius:10px;
+  background:#111;
+  color:white;
+  box-shadow:0 0 10px cyan;
+}
+
+button:active{
+  transform:scale(0.9);
 }
 </style>
 </head>
@@ -43,12 +61,12 @@ button{
 <canvas id="game" width="300" height="600"></canvas>
 
 <div id="panel">
-  <div>🏆 分数: <span id="score">0</span></div>
+  🏆 分数: <span id="score">0</span><br>
 
   <button onclick="move(-1)">⬅</button>
   <button onclick="move(1)">➡</button>
   <button onclick="rotate()">🔄</button>
-  <button onclick="drop()">⬇</button>
+  <button onclick="softDrop()">⬇</button>
 </div>
 
 <audio id="bgm" src="bgm.mp3" loop></audio>
@@ -56,12 +74,11 @@ button{
 <script src="game.js"></script>
 
 <script>
-// 注册SW
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
 
-// 自动播放音乐（需用户点击触发）
+// 点击后播放音乐（解决浏览器限制）
 document.body.addEventListener('click', ()=>{
   document.getElementById('bgm').play().catch(()=>{});
 }, {once:true});
