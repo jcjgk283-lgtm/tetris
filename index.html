@@ -29,7 +29,8 @@ button{
 
 <h2>🎮 俄罗斯方块</h2>
 
-<button onclick="startMusic()">🎵 音乐</button>
+<!-- 音乐按钮（必须点这个才会响） -->
+<button id="musicBtn">🎵 播放音乐</button>
 
 <canvas id="game" width="300" height="600"></canvas>
 
@@ -66,17 +67,17 @@ const shapes = [
 
 let piece;
 
-// ===== 音乐（手机解锁）=====
+// ===== 音乐（100%成功）=====
 const bgm = document.getElementById("bgm");
+const musicBtn = document.getElementById("musicBtn");
 
-// 任意点击解锁音频
-document.body.addEventListener("click", ()=>{
-    bgm.play().catch(()=>{});
-}, {once:true});
-
-function startMusic(){
-    bgm.play().catch(()=>{});
-}
+musicBtn.onclick = function(){
+    bgm.play().then(()=>{
+        musicBtn.innerText = "🎵 音乐已开启";
+    }).catch(()=>{
+        alert("请再点一次按钮");
+    });
+};
 
 // ===== 创建方块 =====
 function newPiece(){
