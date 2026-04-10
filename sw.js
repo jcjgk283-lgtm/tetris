@@ -1,14 +1,16 @@
-const CACHE = "tetris-v1";
+const CACHE_NAME = "tetris-v1";
 
 self.addEventListener("install", e=>{
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(cache=>{
+    caches.open(CACHE_NAME).then(cache=>{
       return cache.addAll([
         "./",
-        "index.html",
-        "game.js",
-        "bgm.mp3",
-        "icon.png"
+        "./index.html",
+        "./game.js",
+        "./manifest.json",
+        "./bgm.mp3",
+        "./icon.png"
       ]);
     })
   );
