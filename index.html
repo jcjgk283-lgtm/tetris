@@ -2,72 +2,77 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块·终极音乐版</title>
+<title>俄罗斯方块·最终版</title>
 <style>
-body{
-    margin:0;
-    background:black;
-    color:white;
-    text-align:center;
+body{margin:0;background:black;color:white;text-align:center;font-family:sans-serif;}
+canvas{background:#111;margin-top:10px;}
+#menu{
+position:absolute;top:0;left:0;width:100%;height:100%;
+display:flex;flex-direction:column;justify-content:center;align-items:center;
+background:black;
 }
-canvas{
-    background:#111;
-    margin-top:10px;
-}
-button{
-    padding:10px;
-    margin:10px;
-}
+button{padding:12px 20px;font-size:16px;margin:5px;}
+#controls{margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<h2>🎮 俄罗斯方块</h2>
-
-<button id="btn">🎵 点击开启音乐</button>
+<div id="menu">
+<h1>🎮 俄罗斯方块</h1>
+<button onclick="startGame()">▶ 开始游戏</button>
+</div>
 
 <canvas id="game" width="300" height="600"></canvas>
+<canvas id="next" width="120" height="120"></canvas>
 
-<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+<div id="score">🏆 分数: 0</div>
+
+<div id="controls">
+<button onclick="moveLeft()">⬅️</button>
+<button onclick="moveRight()">➡️</button>
+<button onclick="rotate()">🔄</button>
+<button onclick="drop()">⬇️</button>
+</div>
+
+<audio id="bgm" src="bgm.mp3" loop></audio>
 
 <script>
-// ===== 🎵 终极防死音方案 =====
-const audio = document.getElementById("bgm");
-const btn = document.getElementById("btn");
+// ===== 音乐 =====
+const bgm=document.getElementById("bgm");
 
-// 强制解锁音频（手机关键）
-function unlockAudio(){
-    audio.play().then(()=>{
-        audio.pause();
-        audio.currentTime = 0;
-    }).catch(()=>{});
+function fadeIn(){
+bgm.volume=0;
+bgm.play();
+let v=0;
+let t=setInterval(()=>{
+v+=0.05;
+if(v>=0.5){v=0.5;clearInterval(t);}
+bgm.volume=v;
+},200);
 }
 
-document.addEventListener("click", unlockAudio, {once:true});
-document.addEventListener("touchstart", unlockAudio, {once:true});
+function fadeOut(){
+let t=setInterval(()=>{
+bgm.volume-=0.05;
+if(bgm.volume<=0){bgm.pause();clearInterval(t);}
+},200);
+}
 
-// 按钮控制
-btn.onclick = async ()=>{
-    try{
-        if(audio.paused){
-            await audio.play();
-            btn.innerText = "⏸️ 暂停音乐";
-        }else{
-            audio.pause();
-            btn.innerText = "🎵 播放音乐";
-        }
-    }catch(e){
-        alert("点一下屏幕再点按钮");
-    }
-};
+document.body.addEventListener("click",()=>{
+bgm.play().then(()=>bgm.pause());
+},{once:true});
 
-// ===== 🎮 游戏（稳定）=====
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+// ===== 游戏 =====
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+const nextCanvas=document.getElementById("next");
+const nctx=nextCanvas.getContext("2d");
 
 const grid=30,col=10,row=20;
-let board = Array.from({length:row},()=>Array(col).fill(null));
+
+let board,piece,nextPiece,running=false,score=0;
 
 const colors=["cyan","yellow","purple","green","red","blue","orange"];
 const shapes=[
@@ -80,98 +85,139 @@ const shapes=[
 [[0,0,1],[1,1,1]]
 ];
 
-let piece;
-
 function newPiece(){
-    let i=Math.floor(Math.random()*shapes.length);
-    return {x:3,y:0,shape:shapes[i],color:colors[i]};
+let i=Math.floor(Math.random()*shapes.length);
+return {x:3,y:0,shape:shapes[i],color:colors[i]};
+}
+
+function startGame(){
+document.getElementById("menu").style.display="none";
+
+board=Array.from({length:row},()=>Array(col).fill(null));
+piece=newPiece();
+nextPiece=newPiece();
+score=0;
+running=true;
+
+fadeIn();
 }
 
 function collide(p){
-    return p.shape.some((r,y)=>
-        r.some((v,x)=>{
-            let nx=p.x+x,ny=p.y+y;
-            return v&&(nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
-        })
-    );
+return p.shape.some((r,y)=>
+r.some((v,x)=>{
+let nx=p.x+x,ny=p.y+y;
+return v&&(nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
+}));
 }
 
 function merge(){
-    piece.shape.forEach((r,y)=>
-        r.forEach((v,x)=>{
-            if(v) board[piece.y+y][piece.x+x]=piece.color;
-        })
-    );
+piece.shape.forEach((r,y)=>
+r.forEach((v,x)=>{
+if(v) board[piece.y+y][piece.x+x]=piece.color;
+}));
 }
 
 function clearLines(){
-    board=board.filter(r=>!r.every(v=>v));
-    while(board.length<row){
-        board.unshift(Array(col).fill(null));
-    }
+let lines=0;
+board=board.filter(r=>{
+if(r.every(v=>v)){lines++;return false;}
+return true;
+});
+while(board.length<row){
+board.unshift(Array(col).fill(null));
+}
+
+if(lines>0){
+score+=lines*100;
+document.getElementById("score").innerText="🏆 分数: "+score;
+}
+}
+
+function drop(){
+if(!running)return;
+
+piece.y++;
+if(collide(piece)){
+piece.y--;
+
+if(piece.y===0){gameOver();return;}
+
+merge();
+clearLines();
+piece=nextPiece;
+nextPiece=newPiece();
+}
+}
+
+function gameOver(){
+running=false;
+fadeOut();
+setTimeout(()=>{
+alert("💀 游戏结束\n得分："+score);
+location.reload();
+},500);
 }
 
 function moveLeft(){piece.x--;if(collide(piece))piece.x++;}
 function moveRight(){piece.x++;if(collide(piece))piece.x--;}
 
-function drop(){
-    piece.y++;
-    if(collide(piece)){
-        piece.y--;
-        merge();
-        clearLines();
-        piece=newPiece();
-    }
-}
-
 function rotate(){
-    let n=piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
-    let old=piece.shape;
-    piece.shape=n;
-    if(collide(piece))piece.shape=old;
+let n=piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+let old=piece.shape;
+piece.shape=n;
+if(collide(piece))piece.shape=old;
 }
 
 document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft")moveLeft();
-    if(e.key==="ArrowRight")moveRight();
-    if(e.key==="ArrowDown")drop();
-    if(e.key==="ArrowUp")rotate();
+if(!running)return;
+if(e.key==="ArrowLeft")moveLeft();
+if(e.key==="ArrowRight")moveRight();
+if(e.key==="ArrowDown")drop();
+if(e.key==="ArrowUp")rotate();
 });
 
 function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    board.forEach((r,y)=>r.forEach((v,x)=>{
-        if(v){
-            ctx.fillStyle=v;
-            ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
-        }
-    }));
+board.forEach((r,y)=>r.forEach((v,x)=>{
+if(v){
+ctx.fillStyle=v;
+ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
+}
+}));
 
-    piece.shape.forEach((r,y)=>r.forEach((v,x)=>{
-        if(v){
-            ctx.fillStyle=piece.color;
-            ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-1,grid-1);
-        }
-    }));
+piece.shape.forEach((r,y)=>r.forEach((v,x)=>{
+if(v){
+ctx.fillStyle=piece.color;
+ctx.fillRect((piece.x+x)*grid,(piece.y+y)*grid,grid-1,grid-1);
+}
+}));
+
+// 下一个方块
+nctx.clearRect(0,0,120,120);
+nextPiece.shape.forEach((r,y)=>r.forEach((v,x)=>{
+if(v){
+nctx.fillStyle=nextPiece.color;
+nctx.fillRect(x*20,y*20,19,19);
+}
+}));
 }
 
 let last=0,acc=0;
 
 function update(t=0){
-    acc+=t-last;
-    last=t;
+acc+=t-last;
+last=t;
 
-    if(acc>500){
-        drop();
-        acc=0;
-    }
-
-    draw();
-    requestAnimationFrame(update);
+if(acc>500){
+drop();
+acc=0;
 }
 
-piece=newPiece();
+draw();
+requestAnimationFrame(update);
+}
+
 update();
 </script>
 
