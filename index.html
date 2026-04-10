@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tetris</title>
+
 <style>
 body{
   margin:0;
@@ -16,55 +17,61 @@ canvas{
   background:#000;
   margin-top:10px;
 }
-.controls button{
-  font-size:20px;
+button{
+  font-size:18px;
   margin:5px;
   padding:10px 15px;
 }
 </style>
 </head>
+
 <body>
+
+<audio id="bgm" loop>
+  <source src="https://files.catbox.moe/7w7l3p.mp3" type="audio/mpeg">
+</audio>
 
 <h2>🎮 Tetris</h2>
 <p>Score: <span id="score">0</span></p>
 
-<canvas id="game" width="200" height="400"></canvas>
+<button onclick="startGame()">▶ 开始游戏 + 音乐</button>
 
-<div class="controls">
-  <button onclick="move(-1)">⬅️</button>
-  <button onclick="move(1)">➡️</button>
+<canvas id="game" width="240" height="400"></canvas>
+
+<div>
+  <button onclick="move(-1)">⬅</button>
+  <button onclick="move(1)">➡</button>
   <button onclick="rotate()">🔄</button>
-  <button onclick="drop()">⬇️</button>
+  <button onclick="drop()">⬇</button>
 </div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const SIZE = 20;
 
-const board = Array.from({length:20},()=>Array(10).fill(0));
-
-const colors = ["cyan","blue","orange","yellow","green","purple","red"];
+const ROWS = 20, COLS = 12, SIZE = 20;
+const board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 
 const shapes = [
+ [[1,1,1],[0,1,0]],
+ [[1,1],[1,1]],
+ [[1,1,0],[0,1,1]],
+ [[0,1,1],[1,1,0]],
  [[1,1,1,1]],
  [[1,0,0],[1,1,1]],
- [[0,0,1],[1,1,1]],
- [[1,1],[1,1]],
- [[0,1,1],[1,1,0]],
- [[0,1,0],[1,1,1]],
- [[1,1,0],[0,1,1]]
+ [[0,0,1],[1,1,1]]
 ];
 
-let piece;
-let score = 0;
+const colors = ["cyan","yellow","green","red","blue","orange","purple"];
+
+let piece, score=0, gameRunning=false;
 
 function newPiece(){
   const i = Math.floor(Math.random()*shapes.length);
   piece = {
     shape: shapes[i],
     color: colors[i],
-    x: 3,
+    x: 4,
     y: 0
   };
 }
@@ -72,7 +79,6 @@ function newPiece(){
 function drawSquare(x,y,color){
   ctx.fillStyle=color;
   ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
-  ctx.strokeStyle="#222";
   ctx.strokeRect(x*SIZE,y*SIZE,SIZE,SIZE);
 }
 
@@ -81,17 +87,13 @@ function draw(){
 
   board.forEach((row,y)=>{
     row.forEach((val,x)=>{
-      if(val){
-        drawSquare(x,y,val);
-      }
+      if(val) drawSquare(x,y,val);
     });
   });
 
   piece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
-      if(val){
-        drawSquare(piece.x+x,piece.y+y,piece.color);
-      }
+      if(val) drawSquare(piece.x+x,piece.y+y,piece.color);
     });
   });
 }
@@ -99,16 +101,8 @@ function draw(){
 function collision(){
   return piece.shape.some((row,y)=>
     row.some((val,x)=>{
-      if(val){
-        let newX = piece.x+x;
-        let newY = piece.y+y;
-        return (
-          newX < 0 ||
-          newX >= 10 ||
-          newY >= 20 ||
-          (board[newY] && board[newY][newX])
-        );
-      }
+      let nx=piece.x+x, ny=piece.y+y;
+      return val && (ny>=ROWS || nx<0 || nx>=COLS || board[ny][nx]);
     })
   );
 }
@@ -116,18 +110,16 @@ function collision(){
 function merge(){
   piece.shape.forEach((row,y)=>{
     row.forEach((val,x)=>{
-      if(val){
-        board[piece.y+y][piece.x+x] = piece.color;
-      }
+      if(val) board[piece.y+y][piece.x+x]=piece.color;
     });
   });
 }
 
 function clearLines(){
-  for(let y=19;y>=0;y--){
+  for(let y=ROWS-1;y>=0;y--){
     if(board[y].every(v=>v)){
       board.splice(y,1);
-      board.unshift(Array(10).fill(0));
+      board.unshift(Array(COLS).fill(0));
       score+=10;
       document.getElementById("score").innerText=score;
     }
@@ -142,8 +134,9 @@ function drop(){
     clearLines();
     newPiece();
     if(collision()){
-      alert("💀 Game Over");
-      location.reload();
+      alert("Game Over");
+      gameRunning=false;
+      return;
     }
   }
   draw();
@@ -151,34 +144,35 @@ function drop(){
 
 function move(dir){
   piece.x+=dir;
-  if(collision()){
-    piece.x-=dir;
-  }
+  if(collision()) piece.x-=dir;
   draw();
 }
 
 function rotate(){
-  const newShape = piece.shape[0].map((_,i)=>
-    piece.shape.map(row=>row[i]).reverse()
-  );
-  const oldShape = piece.shape;
-  piece.shape = newShape;
-  if(collision()){
-    piece.shape = oldShape;
-  }
+  let newShape = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+  let old=piece.shape;
+  piece.shape=newShape;
+  if(collision()) piece.shape=old;
   draw();
 }
 
-document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowLeft") move(-1);
-  if(e.key==="ArrowRight") move(1);
-  if(e.key==="ArrowDown") drop();
-  if(e.key==="ArrowUp") rotate();
-});
+function loop(){
+  if(!gameRunning) return;
+  drop();
+  setTimeout(loop,500);
+}
+
+function startGame(){
+  document.getElementById("bgm").play();
+  score=0;
+  gameRunning=true;
+  for(let y=0;y<ROWS;y++) board[y].fill(0);
+  newPiece();
+  loop();
+}
 
 newPiece();
 draw();
-setInterval(drop,500);
 </script>
 
 </body>
