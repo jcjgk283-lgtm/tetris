@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>俄罗斯方块</title>
+<title>俄罗斯方块·毕业版</title>
 <style>
 body{
     margin:0;
@@ -14,133 +14,116 @@ canvas{
     background:#111;
     margin-top:10px;
 }
-button{
-    padding:10px;
+button, select, input{
     margin:5px;
-}
-.controls{
-    margin-top:10px;
+    padding:8px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🎮 俄罗斯方块（音乐增强版）</h2>
+<h2>🎮 俄罗斯方块·毕业版</h2>
 
-<button id="musicBtn">🎵 开启音乐</button>
+<button onclick="toggleMusic()">🎵 播放 / 暂停</button>
+
+<select onchange="changeMusic(this.value)">
+    <option value="bgm1.mp3">🎵 音乐1</option>
+    <option value="bgm2.mp3">🎵 音乐2</option>
+</select>
+
+<br>
+
+<label>🔊 音量</label>
+<input type="range" min="0" max="1" step="0.01" value="0.5" onchange="setVolume(this.value)">
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<div class="controls">
-    <button onclick="moveLeft()">⬅️</button>
-    <button onclick="rotate()">🔄</button>
-    <button onclick="moveRight()">➡️</button>
-    <button onclick="softDrop()">⬇️</button>
-</div>
+<audio id="bgm" loop src="bgm1.mp3"></audio>
 
 <script>
 // ===== 🎵 音乐系统 =====
+const bgm = document.getElementById("bgm");
+
+function toggleMusic(){
+    if(bgm.paused){
+        bgm.play();
+    }else{
+        bgm.pause();
+    }
+}
+
+function changeMusic(src){
+    bgm.src = src;
+    bgm.play();
+}
+
+function setVolume(v){
+    bgm.volume = v;
+}
+
+// 👉 解决“必须点击才播放”
+document.body.addEventListener("click",()=>{
+    bgm.play().catch(()=>{});
+},{once:true});
+
+
+// ===== 🎮 音效（WebAudio）=====
 let audioCtx;
-let playing = false;
-let musicTimer;
 
-const melody = [
-    659, 494, 523, 587,
-    523, 494, 440,
-    440, 523, 659,
-    587, 523, 494
-];
-
-function playTone(freq, duration=200){
+function sound(freq, time=0.1){
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
     osc.frequency.value = freq;
-    osc.type = "square";
-
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
+    gain.gain.value = 0.2;
+
     osc.start();
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
-
-    osc.stop(audioCtx.currentTime + duration/1000);
+    osc.stop(audioCtx.currentTime + time);
 }
 
-function startMusic(){
-    if(!audioCtx){
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+function rotateSound(){ sound(800,0.1); }
+function clearSound(){ sound(200,0.2); }
 
-    let i = 0;
-    musicTimer = setInterval(()=>{
-        playTone(melody[i % melody.length], 200);
-        i++;
-    }, 220);
 
-    playing = true;
-}
-
-function stopMusic(){
-    clearInterval(musicTimer);
-    playing = false;
-}
-
-document.getElementById("musicBtn").onclick = function(){
-    if(!playing){
-        startMusic();
-        this.innerText = "🎵 关闭音乐";
-    }else{
-        stopMusic();
-        this.innerText = "🎵 开启音乐";
-    }
-};
-
-// ===== 音效 =====
-function rotateSound(){
-    if(audioCtx) playTone(800,100);
-}
-
-function clearSound(){
-    if(audioCtx) playTone(200,300);
-}
-
-// ===== 游戏逻辑 =====
+// ===== 🎮 游戏（稳定版）=====
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const grid = 30;
-const col = 10;
-const row = 20;
+const grid=30, col=10, row=20;
 
-let board = Array.from({length: row}, ()=>Array(col).fill(null));
+let board = Array.from({length:row},()=>Array(col).fill(null));
 
-const colors = ["cyan","yellow","purple","green","red","blue","orange"];
+const colors=["cyan","yellow","purple","green","red","blue","orange"];
 
-const shapes = [
-    [[1,1,1,1]],
-    [[1,1],[1,1]],
-    [[0,1,0],[1,1,1]],
-    [[1,1,0],[0,1,1]],
-    [[0,1,1],[1,1,0]],
-    [[1,0,0],[1,1,1]],
-    [[0,0,1],[1,1,1]]
+const shapes=[
+[[1,1,1,1]],
+[[1,1],[1,1]],
+[[0,1,0],[1,1,1]],
+[[1,1,0],[0,1,1]],
+[[0,1,1],[1,1,0]],
+[[1,0,0],[1,1,1]],
+[[0,0,1],[1,1,1]]
 ];
 
 let piece;
 
 function newPiece(){
-    const i = Math.floor(Math.random()*shapes.length);
+    let i=Math.floor(Math.random()*shapes.length);
     return {x:3,y:0,shape:shapes[i],color:colors[i]};
 }
 
 function collide(p){
     return p.shape.some((r,y)=>
         r.some((v,x)=>{
-            let nx=p.x+x, ny=p.y+y;
-            return v && (nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
+            let nx=p.x+x,ny=p.y+y;
+            return v&&(nx<0||nx>=col||ny>=row||board[ny]?.[nx]);
         })
     );
 }
@@ -154,9 +137,9 @@ function merge(){
 }
 
 function clearLines(){
-    let cleared = false;
-    board = board.filter(r=>{
-        if(r.every(v=>v)){ cleared = true; return false;}
+    let cleared=false;
+    board=board.filter(r=>{
+        if(r.every(v=>v)){cleared=true;return false;}
         return true;
     });
     while(board.length<row){
@@ -165,32 +148,32 @@ function clearLines(){
     if(cleared) clearSound();
 }
 
-function moveLeft(){ piece.x--; if(collide(piece)) piece.x++; }
-function moveRight(){ piece.x++; if(collide(piece)) piece.x--; }
+function moveLeft(){piece.x--;if(collide(piece))piece.x++;}
+function moveRight(){piece.x++;if(collide(piece))piece.x--;}
 
-function softDrop(){
+function drop(){
     piece.y++;
     if(collide(piece)){
         piece.y--;
         merge();
         clearLines();
-        piece = newPiece();
+        piece=newPiece();
     }
 }
 
 function rotate(){
-    const n = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
-    const old = piece.shape;
-    piece.shape = n;
-    if(collide(piece)) piece.shape = old;
+    let n=piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+    let old=piece.shape;
+    piece.shape=n;
+    if(collide(piece))piece.shape=old;
     else rotateSound();
 }
 
 document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft") moveLeft();
-    if(e.key==="ArrowRight") moveRight();
-    if(e.key==="ArrowDown") softDrop();
-    if(e.key==="ArrowUp") rotate();
+    if(e.key==="ArrowLeft")moveLeft();
+    if(e.key==="ArrowRight")moveRight();
+    if(e.key==="ArrowDown")drop();
+    if(e.key==="ArrowUp")rotate();
 });
 
 function draw(){
@@ -211,22 +194,24 @@ function draw(){
     }));
 }
 
-let dropCounter=0, dropInterval=500, lastTime=0;
+let last=0,acc=0;
 
-function update(time=0){
-    const delta=time-lastTime;
-    lastTime=time;
-    dropCounter+=delta;
-    if(dropCounter>dropInterval){
-        softDrop();
-        dropCounter=0;
+function update(t=0){
+    acc+=t-last;
+    last=t;
+
+    if(acc>500){
+        drop();
+        acc=0;
     }
+
     draw();
     requestAnimationFrame(update);
 }
 
 piece=newPiece();
 update();
+
 </script>
 
 </body>
