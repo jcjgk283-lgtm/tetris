@@ -4,76 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>我的游戏</title>
+<title>神级俄罗斯方块</title>
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
 
 <style>
-body {
-    text-align: center;
-    font-family: Arial;
-}
-
-#game {
-    width: 200px;
-    height: 200px;
-    background: red;
-    position: relative;
-    margin: auto;
-}
-
-#player {
-    width: 50px;
-    height: 50px;
-    background: blue;
-    position: absolute;
-    left: 75px;
-    top: 75px;
-}
-
-button {
-    margin: 10px;
-    padding: 10px;
-}
+body { text-align:center; font-family:Arial; background:#111; color:#fff; }
+canvas { background:#000; display:block; margin:auto; }
+button { margin:5px; padding:10px; font-size:16px; }
 </style>
 </head>
 
 <body>
 
-<h2>小游戏</h2>
+<h2>🔥 神级俄罗斯方块 🔥</h2>
 
-<div id="game">
-    <div id="player"></div>
-</div>
+<canvas id="game" width="240" height="400"></canvas>
 
-<!-- 控制按钮 -->
 <div>
-    <button onclick="moveLeft()">⬅</button>
-    <button onclick="moveRight()">➡</button>
-    <button onclick="moveUp()">⬆</button>
-    <button onclick="moveDown()">⬇</button>
+<button onclick="move(-1)">⬅</button>
+<button onclick="move(1)">➡</button>
+<button onclick="rotate()">🔄</button>
+<button onclick="drop()">⬇</button>
 </div>
+
+<!-- 音乐 -->
+<audio id="bgm" src="bgm.mp3" loop></audio>
+
+<script src="game.js"></script>
 
 <script>
-let x = 75;
-let y = 75;
+// 👉 点击任意地方开始音乐（浏览器限制）
+document.body.addEventListener("click", ()=>{
+    document.getElementById("bgm").play();
+},{once:true});
 
-function update() {
-    const player = document.getElementById("player");
-    player.style.left = x + "px";
-    player.style.top = y + "px";
-}
-
-function moveLeft() { x -= 10; update(); }
-function moveRight() { x += 10; update(); }
-function moveUp() { y -= 10; update(); }
-function moveDown() { y += 10; update(); }
-
-// ✅ 注册 Service Worker（正确方式）
+// ✅ 注册 SW
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
+  navigator.serviceWorker.register('sw.js');
 }
 </script>
 
