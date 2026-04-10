@@ -2,183 +2,84 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tetris</title>
-
+<title>俄罗斯方块</title>
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:#fff;
-  text-align:center;
-  font-family:sans-serif;
+body {
+    margin: 0;
+    background: black;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
 }
-canvas{
-  background:#000;
-  margin-top:10px;
+canvas {
+    background: #111;
+    margin-top: 10px;
 }
-button{
-  font-size:18px;
-  margin:5px;
-  padding:10px 15px;
+button {
+    margin-top: 10px;
+    padding: 10px;
+    font-size: 16px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- 🎵 稳定音频（官方测试音频） -->
-<audio id="bgm">
-  <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3" type="audio/mpeg">
+<h2>🎮 俄罗斯方块</h2>
+
+<button onclick="toggleMusic()">🎵 音乐开关</button>
+
+<canvas id="game" width="300" height="600"></canvas>
+
+<audio id="bgm" loop>
+    <source src="bgm.mp3" type="audio/mpeg">
 </audio>
 
-<h2>🎮 Tetris</h2>
-<p>Score: <span id="score">0</span></p>
-
-<button onclick="startGame()">▶ 开始游戏 + 音乐</button>
-
-<canvas id="game" width="240" height="400"></canvas>
-
-<div>
-  <button onclick="move(-1)">⬅</button>
-  <button onclick="move(1)">➡</button>
-  <button onclick="rotate()">🔄</button>
-  <button onclick="drop()">⬇</button>
-</div>
-
 <script>
+const audio = document.getElementById("bgm");
+
+function toggleMusic() {
+    if (audio.paused) {
+        audio.play();
+    } else {
+        audio.pause();
+    }
+}
+
+// 自动播放（用户首次点击页面后生效）
+document.body.addEventListener("click", () => {
+    audio.play().catch(()=>{});
+}, { once: true });
+
+// ====== 简单俄罗斯方块核心 ======
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const ROWS = 20, COLS = 12, SIZE = 20;
-const board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+const grid = 30;
+const cols = 10;
+const rows = 20;
 
-const shapes = [
- [[1,1,1],[0,1,0]],
- [[1,1],[1,1]],
- [[1,1,0],[0,1,1]],
- [[0,1,1],[1,1,0]],
- [[1,1,1,1]],
- [[1,0,0],[1,1,1]],
- [[0,0,1],[1,1,1]]
-];
+let board = Array.from({length: rows}, () => Array(cols).fill(0));
 
-const colors = ["cyan","yellow","green","red","blue","orange","purple"];
-
-let piece, score=0, gameRunning=false;
-
-function newPiece(){
-  const i = Math.floor(Math.random()*shapes.length);
-  piece = {
-    shape: shapes[i],
-    color: colors[i],
-    x: 4,
-    y: 0
-  };
-}
-
-function drawSquare(x,y,color){
-  ctx.fillStyle=color;
-  ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
-  ctx.strokeRect(x*SIZE,y*SIZE,SIZE,SIZE);
-}
-
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  board.forEach((row,y)=>{
-    row.forEach((val,x)=>{
-      if(val) drawSquare(x,y,val);
-    });
-  });
-
-  piece.shape.forEach((row,y)=>{
-    row.forEach((val,x)=>{
-      if(val) drawSquare(piece.x+x,piece.y+y,piece.color);
-    });
-  });
-}
-
-function collision(){
-  return piece.shape.some((row,y)=>
-    row.some((val,x)=>{
-      let nx=piece.x+x, ny=piece.y+y;
-      return val && (ny>=ROWS || nx<0 || nx>=COLS || board[ny][nx]);
-    })
-  );
-}
-
-function merge(){
-  piece.shape.forEach((row,y)=>{
-    row.forEach((val,x)=>{
-      if(val) board[piece.y+y][piece.x+x]=piece.color;
-    });
-  });
-}
-
-function clearLines(){
-  for(let y=ROWS-1;y>=0;y--){
-    if(board[y].every(v=>v)){
-      board.splice(y,1);
-      board.unshift(Array(COLS).fill(0));
-      score+=10;
-      document.getElementById("score").innerText=score;
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let y=0;y<rows;y++){
+        for(let x=0;x<cols;x++){
+            if(board[y][x]){
+                ctx.fillStyle="cyan";
+                ctx.fillRect(x*grid,y*grid,grid-1,grid-1);
+            }
+        }
     }
-  }
 }
 
-function drop(){
-  piece.y++;
-  if(collision()){
-    piece.y--;
-    merge();
-    clearLines();
-    newPiece();
-    if(collision()){
-      alert("Game Over");
-      gameRunning=false;
-      return;
-    }
-  }
-  draw();
+function drop() {
+    board[Math.floor(Math.random()*rows)][Math.floor(Math.random()*cols)] = 1;
+    draw();
 }
 
-function move(dir){
-  piece.x+=dir;
-  if(collision()) piece.x-=dir;
-  draw();
-}
+setInterval(drop,500);
 
-function rotate(){
-  let newShape = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
-  let old=piece.shape;
-  piece.shape=newShape;
-  if(collision()) piece.shape=old;
-  draw();
-}
-
-function loop(){
-  if(!gameRunning) return;
-  drop();
-  setTimeout(loop,500);
-}
-
-function startGame(){
-  let audio = document.getElementById("bgm");
-
-  audio.currentTime = 0;
-  audio.play().catch(()=>{
-    alert("请点击页面后再试一次");
-  });
-
-  score=0;
-  gameRunning=true;
-  for(let y=0;y<ROWS;y++) board[y].fill(0);
-  newPiece();
-  loop();
-}
-
-newPiece();
 draw();
 </script>
 
