@@ -2,46 +2,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>终极俄罗斯方块</title>
+<title>俄罗斯方块</title>
 <style>
 body{
     margin:0;
     background:black;
     color:white;
     text-align:center;
-    font-family:sans-serif;
 }
 canvas{
     background:#111;
     margin-top:10px;
 }
-select,button{
+button{
+    padding:10px;
     margin:5px;
-    padding:8px;
-    font-size:14px;
+    font-size:16px;
+}
+.controls{
+    margin-top:10px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🎮 俄罗斯方块（终极版）</h2>
+<h2>🎮 俄罗斯方块</h2>
 
-<select id="musicSelect">
-    <option value="bgm.mp3">🎵 默认音乐</option>
-    <option value="music2.mp3">🎵 音乐2</option>
-</select>
-
-<button onclick="changeMusic()">切换音乐</button>
+<button onclick="startMusic()">🎵 音乐</button>
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<!-- 背景音乐 -->
-<audio id="bgm" loop></audio>
+<div class="controls">
+    <button onclick="moveLeft()">⬅️</button>
+    <button onclick="rotate()">🔄</button>
+    <button onclick="moveRight()">➡️</button>
+    <button onclick="drop()">⬇️</button>
+</div>
 
-<!-- 音效 -->
-<audio id="rotateSound" src="rotate.mp3"></audio>
-<audio id="clearSound" src="clear.mp3"></audio>
+<audio id="bgm" loop src="bgm.mp3"></audio>
 
 <script>
 const canvas = document.getElementById("game");
@@ -53,43 +52,28 @@ const row = 20;
 
 let board = Array.from({length: row}, ()=>Array(col).fill(0));
 
-// ===== 方块定义 =====
 const shapes = [
-    [[1,1,1,1]], // I
-    [[1,1],[1,1]], // O
-    [[0,1,0],[1,1,1]], // T
-    [[1,1,0],[0,1,1]], // S
-    [[0,1,1],[1,1,0]], // Z
-    [[1,0,0],[1,1,1]], // J
-    [[0,0,1],[1,1,1]]  // L
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,1,0],[0,1,1]],
+    [[0,1,1],[1,1,0]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
 ];
 
-let piece = null;
+let piece;
 
-// ===== 音乐控制 =====
+// ===== 音乐 =====
 const bgm = document.getElementById("bgm");
-const rotateSound = document.getElementById("rotateSound");
-const clearSound = document.getElementById("clearSound");
-
-// 自动解锁播放
-document.body.addEventListener("click", ()=>{
-    bgm.play().catch(()=>{});
-},{once:true});
-
-function changeMusic(){
-    const val = document.getElementById("musicSelect").value;
-    bgm.src = val;
+function startMusic(){
     bgm.play().catch(()=>{});
 }
 
 // ===== 创建方块 =====
 function newPiece(){
     const shape = shapes[Math.floor(Math.random()*shapes.length)];
-    return {
-        x:3,
-        y:0,
-        shape
-    };
+    return {x:3,y:0,shape};
 }
 
 // ===== 碰撞检测 =====
@@ -108,12 +92,12 @@ function collide(p){
     return false;
 }
 
-// ===== 合并方块 =====
+// ===== 合并 =====
 function merge(){
-    piece.shape.forEach((row,y)=>{
-        row.forEach((val,x)=>{
-            if(val){
-                board[piece.y+y][piece.x+x] = val;
+    piece.shape.forEach((r,y)=>{
+        r.forEach((v,x)=>{
+            if(v){
+                board[piece.y+y][piece.x+x]=1;
             }
         });
     });
@@ -121,19 +105,9 @@ function merge(){
 
 // ===== 消行 =====
 function clearLines(){
-    let cleared = 0;
-    board = board.filter(r=>{
-        if(r.every(v=>v)){
-            cleared++;
-            return false;
-        }
-        return true;
-    });
+    board = board.filter(r=>!r.every(v=>v));
     while(board.length < row){
         board.unshift(Array(col).fill(0));
-    }
-    if(cleared){
-        clearSound.play();
     }
 }
 
@@ -146,10 +120,37 @@ function rotate(){
     piece.shape = newShape;
     if(collide(piece)){
         piece.shape = old;
-    }else{
-        rotateSound.play();
     }
 }
+
+// ===== 控制 =====
+function moveLeft(){
+    piece.x--;
+    if(collide(piece)) piece.x++;
+}
+
+function moveRight(){
+    piece.x++;
+    if(collide(piece)) piece.x--;
+}
+
+function drop(){
+    piece.y++;
+    if(collide(piece)){
+        piece.y--;
+        merge();
+        clearLines();
+        piece = newPiece();
+    }
+}
+
+// ===== 键盘支持 =====
+document.addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft();
+    if(e.key==="ArrowRight") moveRight();
+    if(e.key==="ArrowDown") drop();
+    if(e.key==="ArrowUp") rotate();
+});
 
 // ===== 绘制 =====
 function draw(){
@@ -174,42 +175,7 @@ function draw(){
     });
 }
 
-// ===== 下落 =====
-function drop(){
-    piece.y++;
-    if(collide(piece)){
-        piece.y--;
-        merge();
-        clearLines();
-        piece = newPiece();
-    }
-}
-
-// ===== 控制 =====
-document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft") piece.x--;
-    if(e.key==="ArrowRight") piece.x++;
-    if(e.key==="ArrowDown") drop();
-    if(e.key==="ArrowUp") rotate();
-    if(collide(piece)){
-        if(e.key==="ArrowLeft") piece.x++;
-        if(e.key==="ArrowRight") piece.x--;
-    }
-});
-
-// ===== 手势（手机）=====
-let startX=0;
-canvas.addEventListener("touchstart",e=>{
-    startX = e.touches[0].clientX;
-});
-canvas.addEventListener("touchend",e=>{
-    let dx = e.changedTouches[0].clientX - startX;
-    if(dx>30) piece.x++;
-    else if(dx<-30) piece.x--;
-    else rotate();
-});
-
-// ===== 主循环 =====
+// ===== 游戏循环 =====
 piece = newPiece();
 
 setInterval(()=>{
