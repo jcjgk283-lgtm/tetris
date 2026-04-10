@@ -1,10 +1,10 @@
 {
   "name": "神级俄罗斯方块",
-  "short_name": "Tetris",
-  "start_url": "./index.html",
+  "short_name": "俄罗斯方块",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#000",
-  "theme_color": "#000",
+  "background_color": "#000000",
+  "theme_color": "#00ffff",
   "icons": [
     {
       "src": "icon.png",
