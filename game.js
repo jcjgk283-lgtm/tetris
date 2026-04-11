@@ -5,7 +5,11 @@ const COL = 10;
 const ROW = 20;
 const SIZE = 30;
 
+let score = 0;
+
 let board = Array.from({ length: ROW }, () => Array(COL).fill(0));
+
+const COLORS = ["cyan","yellow","purple","orange","blue"];
 
 const SHAPES = [
     [[1,1,1,1]],
@@ -15,12 +19,14 @@ const SHAPES = [
     [[0,0,1],[1,1,1]]
 ];
 
-let piece = randomPiece();
+let piece = newPiece();
 
-function randomPiece(){
+function newPiece(){
+    let shape = SHAPES[Math.floor(Math.random()*SHAPES.length)];
     return {
-        shape: SHAPES[Math.floor(Math.random()*SHAPES.length)],
-        x: 3,
+        shape,
+        color: COLORS[Math.floor(Math.random()*COLORS.length)],
+        x: Math.floor((COL - shape[0].length)/2),
         y: 0
     };
 }
@@ -28,7 +34,6 @@ function randomPiece(){
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // 画已固定方块
     for(let r=0;r<ROW;r++){
         for(let c=0;c<COL;c++){
             if(board[r][c]){
@@ -37,11 +42,10 @@ function draw(){
         }
     }
 
-    // 画当前方块
     piece.shape.forEach((row,i)=>{
         row.forEach((v,j)=>{
             if(v){
-                drawBlock(piece.x+j, piece.y+i,"orange");
+                drawBlock(piece.x+j,piece.y+i,piece.color);
             }
         });
     });
@@ -56,35 +60,51 @@ function drawBlock(x,y,color){
 }
 
 function collide(){
-    for(let i=0;i<piece.shape.length;i++){
-        for(let j=0;j<piece.shape[i].length;j++){
-            if(piece.shape[i][j]){
-                let newX = piece.x + j;
-                let newY = piece.y + i;
+    return piece.shape.some((row,i)=>
+        row.some((v,j)=>{
+            if(!v) return false;
 
-                // ❗边界检测（关键修复）
-                if(newX < 0 || newX >= COL || newY >= ROW){
-                    return true;
-                }
+            let x = piece.x+j;
+            let y = piece.y+i;
 
-                // ❗堆叠检测
-                if(newY >= 0 && board[newY][newX]){
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
+            return (
+                x<0 || x>=COL ||
+                y>=ROW ||
+                (y>=0 && board[y][x])
+            );
+        })
+    );
 }
 
 function merge(){
     piece.shape.forEach((row,i)=>{
         row.forEach((v,j)=>{
             if(v){
-                board[piece.y+i][piece.x+j] = 1;
+                let y = piece.y+i;
+                if(y>=0){
+                    board[y][piece.x+j] = 1;
+                }
             }
         });
     });
+}
+
+function clearLines(){
+    let lines = 0;
+
+    for(let r=ROW-1;r>=0;r--){
+        if(board[r].every(v=>v)){
+            board.splice(r,1);
+            board.unshift(Array(COL).fill(0));
+            lines++;
+            r++;
+        }
+    }
+
+    if(lines){
+        score += lines * 10;
+        document.getElementById("score").innerText = score;
+    }
 }
 
 function drop(){
@@ -94,48 +114,58 @@ function drop(){
         piece.y--;
         merge();
         clearLines();
+        piece = newPiece();
 
-        // ✅ 关键：生成新方块
-        piece = randomPiece();
-
-        // ❗如果新方块一出来就撞 = 游戏结束
         if(collide()){
             alert("游戏结束！");
             board = Array.from({ length: ROW }, () => Array(COL).fill(0));
+            score = 0;
         }
     }
-
-    draw();
 }
 
 function move(dir){
     piece.x += dir;
     if(collide()) piece.x -= dir;
-    draw();
 }
 
 function rotate(){
     let old = piece.shape;
-    piece.shape = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i])).reverse();
+
+    let rotated = piece.shape[0].map((_,i)=>
+        piece.shape.map(r=>r[i]).reverse()
+    );
+
+    piece.shape = rotated;
 
     if(collide()){
-        piece.shape = old;
-    }
-    draw();
-}
-
-function clearLines(){
-    for(let r=ROW-1;r>=0;r--){
-        if(board[r].every(v=>v)){
-            board.splice(r,1);
-            board.unshift(Array(COL).fill(0));
-            r++;
+        piece.x++;
+        if(collide()){
+            piece.x -= 2;
+            if(collide()){
+                piece.x++;
+                piece.shape = old;
+            }
         }
     }
 }
 
-// 自动下落（速度正常）
-setInterval(drop, 500);
+let last = 0;
+let acc = 0;
+let speed = 500;
 
-// 初始绘制
-draw();
+function update(time=0){
+    let delta = time - last;
+    last = time;
+
+    acc += delta;
+    if(acc > speed){
+        drop();
+        acc = 0;
+    }
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+update();
