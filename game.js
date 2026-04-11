@@ -1,129 +1,141 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const COLS = 10;
-const ROWS = 20;
+const COL = 10;
+const ROW = 20;
 const SIZE = 30;
 
-let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let board = Array.from({ length: ROW }, () => Array(COL).fill(0));
 
 const SHAPES = [
-  [[1,1,1,1]], // I
-  [[1,1],[1,1]], // O
-  [[0,1,0],[1,1,1]], // T
-  [[1,1,0],[0,1,1]], // S
-  [[0,1,1],[1,1,0]], // Z
-  [[1,0,0],[1,1,1]], // J
-  [[0,0,1],[1,1,1]]  // L
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]]
 ];
 
-let piece, x, y;
+let piece = randomPiece();
 
-// 🎯 新方块
-function newPiece() {
-  piece = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-  x = Math.floor(COLS / 2) - 1;
-  y = 0;
+function randomPiece(){
+    return {
+        shape: SHAPES[Math.floor(Math.random()*SHAPES.length)],
+        x: 3,
+        y: 0
+    };
 }
 
-// 🎯 旋转
-function rotate() {
-  let newPiece = piece[0].map((_, i) => piece.map(row => row[i]).reverse());
-  if (!collision(newPiece, x, y)) {
-    piece = newPiece;
-  }
-}
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// 🎯 碰撞检测（核心修复）
-function collision(p, px, py) {
-  for (let r = 0; r < p.length; r++) {
-    for (let c = 0; c < p[r].length; c++) {
-      if (p[r][c]) {
-        let nx = px + c;
-        let ny = py + r;
-
-        if (
-          nx < 0 ||
-          nx >= COLS ||
-          ny >= ROWS ||
-          (ny >= 0 && board[ny][nx])
-        ) {
-          return true;
+    // 画已固定方块
+    for(let r=0;r<ROW;r++){
+        for(let c=0;c<COL;c++){
+            if(board[r][c]){
+                drawBlock(c,r,"cyan");
+            }
         }
-      }
     }
-  }
-  return false;
-}
 
-// 🎯 固定方块
-function merge() {
-  piece.forEach((row, r) => {
-    row.forEach((v, c) => {
-      if (v) {
-        board[y + r][x + c] = 1;
-      }
+    // 画当前方块
+    piece.shape.forEach((row,i)=>{
+        row.forEach((v,j)=>{
+            if(v){
+                drawBlock(piece.x+j, piece.y+i,"orange");
+            }
+        });
     });
-  });
 }
 
-// 🎯 消行
-function clearLines() {
-  board = board.filter(row => row.some(v => v === 0));
-  while (board.length < ROWS) {
-    board.unshift(Array(COLS).fill(0));
-  }
+function drawBlock(x,y,color){
+    ctx.fillStyle=color;
+    ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
+
+    ctx.strokeStyle="#000";
+    ctx.strokeRect(x*SIZE,y*SIZE,SIZE,SIZE);
 }
 
-// 🎯 下落（核心修复）
-function drop() {
-  if (!collision(piece, x, y + 1)) {
-    y++;
-  } else {
-    merge();
-    clearLines();
-    newPiece();
-  }
+function collide(){
+    for(let i=0;i<piece.shape.length;i++){
+        for(let j=0;j<piece.shape[i].length;j++){
+            if(piece.shape[i][j]){
+                let newX = piece.x + j;
+                let newY = piece.y + i;
+
+                // ❗边界检测（关键修复）
+                if(newX < 0 || newX >= COL || newY >= ROW){
+                    return true;
+                }
+
+                // ❗堆叠检测
+                if(newY >= 0 && board[newY][newX]){
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
-// 🎯 左右移动
-function move(dir) {
-  if (!collision(piece, x + dir, y)) {
-    x += dir;
-  }
-}
-
-// 🎯 绘制
-function draw() {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // 画已固定
-  board.forEach((row, r) => {
-    row.forEach((v, c) => {
-      if (v) {
-        ctx.fillStyle = "cyan";
-        ctx.fillRect(c * SIZE, r * SIZE, SIZE - 1, SIZE - 1);
-      }
+function merge(){
+    piece.shape.forEach((row,i)=>{
+        row.forEach((v,j)=>{
+            if(v){
+                board[piece.y+i][piece.x+j] = 1;
+            }
+        });
     });
-  });
-
-  // 画当前方块
-  piece.forEach((row, r) => {
-    row.forEach((v, c) => {
-      if (v) {
-        ctx.fillStyle = "orange";
-        ctx.fillRect((x + c) * SIZE, (y + r) * SIZE, SIZE - 1, SIZE - 1);
-      }
-    });
-  });
 }
 
-// 🎯 游戏循环（稳定速度）
-function update() {
-  drop();
-  draw();
+function drop(){
+    piece.y++;
+
+    if(collide()){
+        piece.y--;
+        merge();
+        clearLines();
+
+        // ✅ 关键：生成新方块
+        piece = randomPiece();
+
+        // ❗如果新方块一出来就撞 = 游戏结束
+        if(collide()){
+            alert("游戏结束！");
+            board = Array.from({ length: ROW }, () => Array(COL).fill(0));
+        }
+    }
+
+    draw();
 }
 
-newPiece();
-setInterval(update, 500); // 👈 调慢速度（关键！）
+function move(dir){
+    piece.x += dir;
+    if(collide()) piece.x -= dir;
+    draw();
+}
+
+function rotate(){
+    let old = piece.shape;
+    piece.shape = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i])).reverse();
+
+    if(collide()){
+        piece.shape = old;
+    }
+    draw();
+}
+
+function clearLines(){
+    for(let r=ROW-1;r>=0;r--){
+        if(board[r].every(v=>v)){
+            board.splice(r,1);
+            board.unshift(Array(COL).fill(0));
+            r++;
+        }
+    }
+}
+
+// 自动下落（速度正常）
+setInterval(drop, 500);
+
+// 初始绘制
+draw();
