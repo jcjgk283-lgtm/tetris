@@ -1,159 +1,135 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-const ROW = 20;
-const COL = 10;
+const COLS = 10;
+const ROWS = 20;
 const SIZE = 30;
 
-let board = Array.from({ length: ROW }, () => Array(COL).fill(0));
-
-const COLORS = ["#0ff","#ff0","#f0f","#0f0","#f00","#00f","#fa0"];
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 
 const SHAPES = [
-[[1,1,1,1]],
-[[1,1],[1,1]],
-[[0,1,0],[1,1,1]],
-[[1,1,0],[0,1,1]],
-[[0,1,1],[1,1,0]],
-[[1,0,0],[1,1,1]],
-[[0,0,1],[1,1,1]]
+  [[1,1,1,1]], // I
+  [[1,1],[1,1]], // O
+  [[0,1,0],[1,1,1]], // T
+  [[1,0,0],[1,1,1]], // L
+  [[0,0,1],[1,1,1]], // J
 ];
 
-let piece, color, x, y;
-let score = 0;
-
-let dropInterval = 600;
-let lastTime = 0;
+let piece = null;
+let x = 3;
+let y = 0;
 
 function newPiece() {
-    let id = Math.floor(Math.random()*SHAPES.length);
-    piece = SHAPES[id];
-    color = COLORS[id];
-    x = 3;
-    y = 0;
+  piece = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  x = 3;
+  y = 0;
+
+  if (collide()) {
+    alert("游戏结束");
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  }
 }
 
-function drawCell(x,y,color){
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = color;
-    ctx.fillStyle = color;
-    ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
-}
+function collide() {
+  for (let r = 0; r < piece.length; r++) {
+    for (let c = 0; c < piece[r].length; c++) {
+      if (piece[r][c]) {
+        let nx = x + c;
+        let ny = y + r;
 
-function draw(){
-    ctx.fillStyle="#000";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    board.forEach((row,r)=>{
-        row.forEach((v,c)=>{
-            if(v) drawCell(c,r,v);
-        });
-    });
-
-    piece.forEach((row,i)=>{
-        row.forEach((v,j)=>{
-            if(v) drawCell(x+j,y+i,color);
-        });
-    });
-}
-
-function collide(nx,ny,p=piece){
-    for(let i=0;i<p.length;i++){
-        for(let j=0;j<p[i].length;j++){
-            if(p[i][j]){
-                let newX=nx+j;
-                let newY=ny+i;
-                if(newX<0||newX>=COL||newY>=ROW) return true;
-                if(board[newY] && board[newY][newX]) return true;
-            }
+        if (
+          nx < 0 || nx >= COLS ||
+          ny >= ROWS ||
+          (ny >= 0 && board[ny][nx])
+        ) {
+          return true;
         }
+      }
     }
-    return false;
+  }
+  return false;
 }
 
-function merge(){
-    piece.forEach((row,i)=>{
-        row.forEach((v,j)=>{
-            if(v) board[y+i][x+j]=color;
-        });
+function merge() {
+  for (let r = 0; r < piece.length; r++) {
+    for (let c = 0; c < piece[r].length; c++) {
+      if (piece[r][c]) {
+        board[y + r][x + c] = 1;
+      }
+    }
+  }
+}
+
+function clearLines() {
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (board[r].every(v => v === 1)) {
+      board.splice(r, 1);
+      board.unshift(Array(COLS).fill(0));
+      r++;
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 画已固定
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c]) {
+        ctx.fillStyle = "#0ff";
+        ctx.fillRect(c * SIZE, r * SIZE, SIZE, SIZE);
+      }
+    }
+  }
+
+  // 画当前方块
+  ctx.fillStyle = "#f90";
+  piece.forEach((row, r) => {
+    row.forEach((v, c) => {
+      if (v) {
+        ctx.fillRect((x + c) * SIZE, (y + r) * SIZE, SIZE, SIZE);
+      }
     });
+  });
 }
 
-function clearLines(){
-    let lines=0;
-
-    board = board.filter(row=>{
-        if(row.every(v=>v)){
-            lines++;
-            return false;
-        }
-        return true;
-    });
-
-    while(board.length<ROW){
-        board.unshift(Array(COL).fill(0));
-    }
-
-    if(lines>0){
-        score += lines*100;
-        document.getElementById("score").innerText=score;
-    }
+function drop() {
+  y++;
+  if (collide()) {
+    y--;
+    merge();
+    clearLines();
+    newPiece();
+  }
 }
 
-function rotate(){
-    let newPiece = piece[0].map((_,i)=>piece.map(r=>r[i]).reverse());
-    if(!collide(x,y,newPiece)) piece=newPiece;
+function move(dir) {
+  x += dir;
+  if (collide()) x -= dir;
 }
 
-function move(dir){
-    if(!collide(x+dir,y)) x+=dir;
+function rotate() {
+  let rotated = piece[0].map((_, i) =>
+    piece.map(row => row[i]).reverse()
+  );
+
+  let old = piece;
+  piece = rotated;
+  if (collide()) piece = old;
 }
 
-function drop(){
-    if(!collide(x,y+1)){
-        y++;
-    }else{
-        merge();
-        clearLines();
-        newPiece();
-
-        if(collide(x,y)){
-            alert("游戏结束！");
-            board = Array.from({ length: ROW }, () => Array(COL).fill(0));
-            score=0;
-        }
-    }
-}
-
-function loop(time=0){
-    if(time-lastTime>dropInterval){
-        drop();
-        lastTime=time;
-    }
-    draw();
-    requestAnimationFrame(loop);
-}
-
-// 控制
-document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft") move(-1);
-    if(e.key==="ArrowRight") move(1);
-    if(e.key==="ArrowUp") rotate();
-    if(e.key==="ArrowDown") drop();
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") move(-1);
+  if (e.key === "ArrowRight") move(1);
+  if (e.key === "ArrowDown") drop();
+  if (e.key === "ArrowUp") rotate();
 });
 
-// 手机按钮（你HTML已有）
-window.moveLeft=()=>move(-1);
-window.moveRight=()=>move(1);
-window.rotate=()=>rotate();
-window.drop=()=>drop();
+setInterval(() => {
+  drop();
+  draw();
+}, 500);
 
-// 音乐
-document.body.addEventListener("click",()=>{
-    const bgm=document.getElementById("bgm");
-    if(bgm) bgm.play();
-},{once:true});
-
-// 启动
 newPiece();
-loop();
+draw();
