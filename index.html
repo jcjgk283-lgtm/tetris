@@ -1,33 +1,38 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
 <meta charset="UTF-8">
+
+<!-- 📱 防缩放 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<!-- 📦 PWA -->
 <link rel="manifest" href="manifest.json">
-<title>🔥 神级俄罗斯方块 🔥</title>
+
+<title>神级俄罗斯方块</title>
 
 <style>
-body {
-    margin: 0;
-    background: black;
-    color: white;
-    text-align: center;
-    font-family: sans-serif;
+body{
+    background:black;
+    color:white;
+    text-align:center;
+    margin:0;
 }
 
-h2 {
-    text-shadow: 0 0 10px #0ff;
+h2{
+    text-shadow:0 0 10px cyan;
 }
 
-canvas {
-    background: #000;
-    box-shadow: 0 0 20px #0ff;
+canvas{
+    box-shadow:0 0 20px cyan;
+    background:#000;
+    margin-top:10px;
 }
 
-button {
-    margin: 10px;
-    padding: 15px;
-    font-size: 20px;
+button{
+    font-size:20px;
+    padding:10px;
+    margin:5px;
 }
 </style>
 </head>
@@ -38,24 +43,16 @@ button {
 
 <canvas id="game" width="300" height="600"></canvas>
 
-<div>🏆 分数: <span id="score">0</span></div>
+<div>🏆 分数：<span id="score">0</span></div>
 
 <div>
-<button onclick="move(-1)">⬅</button>
-<button onclick="move(1)">➡</button>
-<button onclick="rotate()">🔄</button>
-<button onclick="drop()">⬇</button>
+    <button onclick="move(-1)">⬅️</button>
+    <button onclick="move(1)">➡️</button>
+    <button onclick="rotate()">🔄</button>
+    <button onclick="drop()">⬇️</button>
 </div>
 
-<audio id="bgm" src="bgm.mp3" loop></audio>
-
 <script src="game.js"></script>
-
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-}
-</script>
 
 </body>
 </html>
